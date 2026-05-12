@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { appUrl } from "@/lib/env";
-import { getEvolutionConfig } from "@/providers/whatsapp/evolution";
+import { evolutionWebhookUrl, getEvolutionConfig } from "@/providers/whatsapp/evolution";
 import { requireApiUser } from "@/server/services/api-auth";
 
 export async function GET() {
@@ -31,7 +30,7 @@ export async function GET() {
     evolutionInstanceName: evolution.instanceName,
     webhookSecretConfigured,
     verifyToken,
-    webhookUrl: `${appUrl()}/api/webhooks/whatsapp`,
+    webhookUrl: evolutionWebhookUrl(),
     recommendedTemplate: "hello_world",
     recommendedLanguage: "en_US"
   });

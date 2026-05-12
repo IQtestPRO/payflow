@@ -20,16 +20,28 @@ EVOLUTION_API_BASE_URL=http://localhost:8080
 EVOLUTION_API_KEY=payflow-evolution-local-key
 EVOLUTION_INSTANCE_NAME=payflow-local
 APP_URL=http://localhost:3000
+WHATSAPP_WEBHOOK_URL=http://host.docker.internal:3000/api/webhooks/whatsapp
 WHATSAPP_WEBHOOK_SECRET=
 ```
 
 Para desenvolvimento local, deixe `WHATSAPP_WEBHOOK_SECRET` vazio. Se configurar um secret, o webhook passa a exigir assinatura HMAC e a Evolution precisa enviar essa assinatura.
+
+Quando a Evolution roda pelo Docker Compose, use `host.docker.internal` no webhook. Dentro do container, `localhost` aponta para o proprio container da Evolution, nao para o Next.js rodando no Windows.
 
 ## Subir a Evolution local
 
 ```bash
 docker compose up -d evolution-api
 ```
+
+O Compose fixa a imagem `evoapicloud/evolution-api:v2.3.7`. Se voce ja tinha um container antigo `atendai/evolution-api:v2.1.1` rodando e o endpoint `/instance/connect/payflow-local` responde apenas `{"count":0}`, atualize o container:
+
+```bash
+docker compose pull evolution-api
+docker compose up -d evolution-api
+```
+
+Depois, volte para `/integracoes`, clique em `Criar` e em `Gerar QR`.
 
 O Compose também sobe `evolution-postgres` e `evolution-redis`.
 

@@ -1,17 +1,18 @@
-import { DEFAULT_WORKSPACE_ID, createOrUpdateCustomer, recordTrackingEvent, recordWebhookEvent, registerInboundWhatsAppMessage, upsertPayment } from "@/server/repositories/payflow-repository";
+import { createOrUpdateCustomer, getWorkspaceId, recordTrackingEvent, recordWebhookEvent, registerInboundWhatsAppMessage, upsertPayment } from "@/server/repositories/payflow-repository";
 import { cancelRecoveryBecausePaid, scheduleRecoveryForPayment } from "@/server/services/recovery";
 import { getWhatsAppProvider } from "@/providers/whatsapp";
 import { UmbrellaProvider } from "@/providers/payments/umbrella";
 import { UtmifyProvider } from "@/providers/tracking/utmify";
 
-export async function processWhatsAppWebhookPayload(payload: unknown, workspaceId = DEFAULT_WORKSPACE_ID) {
+export async function processWhatsAppWebhookPayload(payload: unknown, workspaceId?: string) {
+  const targetWorkspaceId = workspaceId ?? (await getWorkspaceId());
   const provider = getWhatsAppProvider();
   const messages = provider.parseWebhook(payload);
   const results = [];
 
   for (const message of messages) {
     const event = await recordWebhookEvent({
-      workspaceId,
+      workspaceId: targetWorkspaceId,
       provider: "WHATSAPP",
       eventType: message.eventType,
       externalId: message.providerMessageId,
@@ -23,18 +24,19 @@ export async function processWhatsAppWebhookPayload(payload: unknown, workspaceI
       continue;
     }
 
-    results.push(await registerInboundWhatsAppMessage({ ...message, workspaceId, metadataJson: message.raw }));
+    results.push(await registerInboundWhatsAppMessage({ ...message, workspaceId: targetWorkspaceId, metadataJson: message.raw }));
   }
 
   return { received: messages.length, results };
 }
 
-export async function processUmbrellaWebhookPayload(payload: unknown, workspaceId = DEFAULT_WORKSPACE_ID) {
+export async function processUmbrellaWebhookPayload(payload: unknown, workspaceId?: string) {
+  const targetWorkspaceId = workspaceId ?? (await getWorkspaceId());
   const provider = new UmbrellaProvider();
   const normalized = provider.normalizeWebhook(payload);
 
   const webhook = await recordWebhookEvent({
-    workspaceId,
+    workspaceId: targetWorkspaceId,
     provider: "UMBRELLA",
     eventType: normalized.eventType,
     externalId: normalized.externalId,
@@ -54,18 +56,18 @@ export async function processUmbrellaWebhookPayload(payload: unknown, workspaceI
       status: normalized.payment.status === "PAID" ? "BUYER" : "PAYMENT_PENDING",
       source: "Umbrella"
     },
-    workspaceId
+    targetWorkspaceId
   );
 
   const payment = await upsertPayment(
     {
       ...normalized.payment,
-      workspaceId,
+      workspaceId: targetWorkspaceId,
       customerId: customer.id,
       customerName: customer.name,
       customerPhone: customer.phone
     },
-    workspaceId
+    targetWorkspaceId
   );
 
   if (payment.status === "PAID") {
@@ -73,16 +75,17 @@ export async function processUmbrellaWebhookPayload(payload: unknown, workspaceI
     return { payment, recovery: "converted" };
   }
 
-  const recovery = await scheduleRecoveryForPayment(payment, workspaceId);
+  const recovery = await scheduleRecoveryForPayment(payment, targetWorkspaceId);
   return { payment, recovery };
 }
 
-export async function processUtmifyWebhookPayload(payload: unknown, workspaceId = DEFAULT_WORKSPACE_ID) {
+export async function processUtmifyWebhookPayload(payload: unknown, workspaceId?: string) {
+  const targetWorkspaceId = workspaceId ?? (await getWorkspaceId());
   const provider = new UtmifyProvider();
   const normalized = provider.normalizeWebhook(payload);
 
   const webhook = await recordWebhookEvent({
-    workspaceId,
+    workspaceId: targetWorkspaceId,
     provider: "UTMIFY",
     eventType: normalized.eventType,
     externalId: normalized.externalId,
@@ -103,13 +106,13 @@ export async function processUtmifyWebhookPayload(payload: unknown, workspaceId 
         lastCampaign: normalized.campaign,
         status: "NEW"
       },
-      workspaceId
+      targetWorkspaceId
     );
     customerId = customer.id;
   }
 
   await recordTrackingEvent({
-    workspaceId,
+    workspaceId: targetWorkspaceId,
     customerId,
     paymentId: normalized.paymentId,
     offerId: normalized.offerId,

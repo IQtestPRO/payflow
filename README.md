@@ -44,6 +44,8 @@ Para subir a Evolution API local com QR code:
 docker compose up -d evolution-api
 ```
 
+O compose usa `evoapicloud/evolution-api:v2.3.7`. Se um container antigo ficar preso em `{"count":0}` ao gerar QR, rode `docker compose pull evolution-api` e depois `docker compose up -d evolution-api`.
+
 ```bash
 npm run db:migrate
 npm run db:seed
@@ -129,6 +131,11 @@ Para o caminho local com QR code, configure:
 - `EVOLUTION_API_BASE_URL`
 - `EVOLUTION_API_KEY`
 - `EVOLUTION_INSTANCE_NAME`
+- `WHATSAPP_WEBHOOK_URL`
+- `CONFIG_SESSION_PHONE_CLIENT`
+- `CONFIG_SESSION_PHONE_NAME`
+- `QRCODE_LIMIT`
+- `QRCODE_COLOR`
 
 Veja o passo a passo em `docs/evolution-local-quickstart.md`.
 
@@ -153,6 +160,8 @@ A Evolution API pode rodar depois em uma VM na AWS, mas trate Free Tier/creditos
 ## Deploy na Vercel
 
 O app Next.js pode ser hospedado na Vercel com dominio proprio. Use o guia em `docs/vercel-deploy.md`.
+
+Para a publicacao oficial em `pay-flow.shop`, use tambem `docs/production-launch-checklist.md`.
 
 Resumo:
 

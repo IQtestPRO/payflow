@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EvolutionWhatsAppProvider } from "../../src/providers/whatsapp/evolution";
+import { EvolutionWhatsAppProvider, enrichEvolutionQrResponse } from "../../src/providers/whatsapp/evolution";
 
 describe("EvolutionWhatsAppProvider", () => {
   it("normalizes inbound text messages from Evolution webhooks", () => {
@@ -56,5 +56,23 @@ describe("EvolutionWhatsAppProvider", () => {
     });
 
     expect(messages).toHaveLength(0);
+  });
+
+  it("generates a QR image when Evolution returns only the connection code", async () => {
+    const response = await enrichEvolutionQrResponse({
+      pairingCode: "WZYEH1YY",
+      code: "2@y8eK+bjtEjUWy9/FOM...",
+      count: 1
+    });
+
+    expect(response).toMatchObject({
+      pairingCode: "WZYEH1YY",
+      code: "2@y8eK+bjtEjUWy9/FOM...",
+      qrcode: {
+        code: "2@y8eK+bjtEjUWy9/FOM..."
+      }
+    });
+    expect((response as { base64?: string }).base64).toMatch(/^data:image\/png;base64,/);
+    expect((response as { qrcode?: { base64?: string } }).qrcode?.base64).toMatch(/^data:image\/png;base64,/);
   });
 });

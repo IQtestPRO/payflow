@@ -1,4 +1,5 @@
 import { appUrl } from "@/lib/env";
+import { toDataURL } from "qrcode";
 import type {
   ParsedWhatsAppMessage,
   WhatsAppProvider,
@@ -44,6 +45,17 @@ type EvolutionWebhookPayload = {
   data?: EvolutionWebhookData | EvolutionWebhookData[];
 };
 
+type EvolutionQrPayload = {
+  base64?: string;
+  code?: string;
+  pairingCode?: string;
+  qrcode?: string | {
+    base64?: string;
+    code?: string;
+    pairingCode?: string;
+  };
+};
+
 export function getEvolutionConfig(): EvolutionConfig {
   return {
     baseUrl: process.env.EVOLUTION_API_BASE_URL || DEFAULT_EVOLUTION_BASE_URL,
@@ -53,7 +65,11 @@ export function getEvolutionConfig(): EvolutionConfig {
 }
 
 export function evolutionWebhookUrl() {
-  return `${appUrl()}/api/webhooks/whatsapp`;
+  const configured = process.env.WHATSAPP_WEBHOOK_URL;
+  if (configured) return configured;
+
+  const baseUrl = getDockerReachableAppUrl(appUrl());
+  return `${baseUrl}/api/webhooks/whatsapp`;
 }
 
 export class EvolutionWhatsAppProvider implements WhatsAppProvider {
@@ -134,7 +150,7 @@ export class EvolutionWhatsAppProvider implements WhatsAppProvider {
   }
 
   async createInstance() {
-    return this.request("/instance/create", {
+    const raw = await this.request("/instance/create", {
       method: "POST",
       body: JSON.stringify({
         instanceName: this.config.instanceName,
@@ -153,21 +169,33 @@ export class EvolutionWhatsAppProvider implements WhatsAppProvider {
         }
       })
     });
+
+    return enrichEvolutionQrResponse(raw);
   }
 
   async connectInstance(phone?: string) {
     const query = phone ? `?number=${encodeURIComponent(normalizePhone(phone))}` : "";
-    return this.request(`/instance/connect/${this.config.instanceName}${query}`, { method: "GET" });
+    const raw = await this.request(`/instance/connect/${this.config.instanceName}${query}`, { method: "GET" });
+
+    return enrichEvolutionQrResponse(raw);
   }
 
   async setWebhook(url = evolutionWebhookUrl()) {
+    const webhook = {
+      enabled: true,
+      url,
+      webhookByEvents: false,
+      webhookBase64: false,
+      webhook_by_events: false,
+      webhook_base64: false,
+      events: [...EVOLUTION_WEBHOOK_EVENTS]
+    };
+
     return this.request(`/webhook/set/${this.config.instanceName}`, {
       method: "POST",
       body: JSON.stringify({
-        url,
-        webhook_by_events: false,
-        webhook_base64: false,
-        events: [...EVOLUTION_WEBHOOK_EVENTS]
+        ...webhook,
+        webhook
       })
     });
   }
@@ -193,6 +221,29 @@ export class EvolutionWhatsAppProvider implements WhatsAppProvider {
 
     return raw;
   }
+}
+
+export async function enrichEvolutionQrResponse(raw: unknown) {
+  if (!isRecord(raw)) return raw;
+
+  const qr = raw as EvolutionQrPayload;
+  const code = extractEvolutionQrCode(qr);
+  const existingImage = normalizeQrImage(extractEvolutionQrImage(qr));
+  const image = existingImage ?? (code ? await toDataURL(code, { margin: 2, width: 320 }) : undefined);
+
+  if (!image) return raw;
+
+  const qrcode = isRecord(qr.qrcode) ? qr.qrcode : {};
+
+  return {
+    ...raw,
+    base64: image,
+    qrcode: {
+      ...qrcode,
+      base64: image,
+      code: code ?? readString(qrcode, "code")
+    }
+  };
 }
 
 function renderEvolutionTemplateFallback(input: WhatsAppTemplateSendInput) {
@@ -226,14 +277,91 @@ function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
 }
 
+function getDockerReachableAppUrl(value: string) {
+  if (!isLocalEvolutionApi()) return value;
+
+  try {
+    const url = new URL(value);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      url.hostname = "host.docker.internal";
+      return url.toString().replace(/\/$/, "");
+    }
+  } catch {
+    return value;
+  }
+
+  return value;
+}
+
+function isLocalEvolutionApi() {
+  try {
+    const url = new URL(getEvolutionConfig().baseUrl);
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
 function extractEvolutionMessageId(raw: unknown) {
   return (raw as { key?: { id?: string } } | null)?.key?.id;
 }
 
 function extractEvolutionError(raw: unknown) {
-  const data = raw as { message?: string | string[]; error?: string; response?: { message?: string | string[] } } | null;
+  const data = raw as { message?: unknown; error?: unknown; response?: { message?: unknown } } | null;
   const message = data?.message ?? data?.response?.message ?? data?.error;
-  return Array.isArray(message) ? message.join(", ") : message;
+  return formatEvolutionErrorMessage(message);
+}
+
+function formatEvolutionErrorMessage(message: unknown): string | undefined {
+  if (!message) return undefined;
+  if (typeof message === "string") return message;
+  if (Array.isArray(message)) {
+    return message.map(formatEvolutionErrorMessage).filter(Boolean).join(", ");
+  }
+
+  if (isRecord(message)) {
+    const number = readString(message, "number");
+    const exists = message.exists;
+    if (number && exists === false) return `Numero ${number} nao encontrado no WhatsApp`;
+
+    return JSON.stringify(message);
+  }
+
+  return String(message);
+}
+
+function extractEvolutionQrCode(data: EvolutionQrPayload) {
+  const qrcode = data.qrcode;
+  if (typeof qrcode === "string" && !looksLikeImageData(qrcode)) return qrcode;
+  if (isRecord(qrcode)) return readString(qrcode, "code") ?? data.code;
+
+  return data.code;
+}
+
+function extractEvolutionQrImage(data: EvolutionQrPayload) {
+  const qrcode = data.qrcode;
+  if (typeof qrcode === "string" && looksLikeImageData(qrcode)) return qrcode;
+  if (isRecord(qrcode)) return readString(qrcode, "base64");
+
+  return data.base64;
+}
+
+function normalizeQrImage(value?: string) {
+  if (!value) return undefined;
+  return value.startsWith("data:image") ? value : `data:image/png;base64,${value}`;
+}
+
+function looksLikeImageData(value: string) {
+  return value.startsWith("data:image") || value.startsWith("iVBOR") || value.startsWith("/9j/");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function readString(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
 }
 
 function safeJsonParse(text: string) {

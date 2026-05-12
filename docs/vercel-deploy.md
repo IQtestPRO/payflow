@@ -1,5 +1,11 @@
 # Deploy do PayFlow na Vercel
 
+Deploy oficial atual:
+
+- App: `https://pay-flow.shop`
+- Webhook WhatsApp: `https://pay-flow.shop/api/webhooks/whatsapp`
+- Subdominio sugerido para Evolution: `https://evolution.pay-flow.shop`
+
 Este guia prepara o PayFlow para rodar o app Next.js na Vercel com domínio próprio.
 
 ## Arquitetura recomendada

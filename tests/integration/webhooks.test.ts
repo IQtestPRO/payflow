@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { demoStore } from "../../src/lib/demo-data";
 import { processUmbrellaWebhookPayload, processWhatsAppWebhookPayload } from "../../src/server/services/webhooks";
+
+vi.hoisted(() => {
+  process.env.DATABASE_URL = "";
+  process.env.WHATSAPP_PROVIDER = "mock";
+});
 
 describe("webhook processing", () => {
   it("creates customer, conversation and inbound message from WhatsApp webhook", async () => {

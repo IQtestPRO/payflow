@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { demoStore, DEMO_USER_EMAIL, DEMO_USER_PASSWORD } from "@/lib/demo-data";
+import { demoStore, DEMO_USER_EMAIL, DEMO_USER_PASSWORD, DEMO_WORKSPACE_ID } from "@/lib/demo-data";
 import { hasDatabaseUrl } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -100,7 +100,20 @@ export async function clearSessionCookie() {
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
-  return verifySession(cookieStore.get(SESSION_COOKIE)?.value);
+  const session = await verifySession(cookieStore.get(SESSION_COOKIE)?.value);
+  if (!session || !hasDatabaseUrl() || session.workspaceId !== DEMO_WORKSPACE_ID) {
+    return session;
+  }
+
+  try {
+    const workspace = await prisma.workspace.findFirst({ select: { id: true } });
+    return workspace?.id ? { ...session, workspaceId: workspace.id } : session;
+  } catch (error) {
+    logger.warn("Could not resolve database workspace for demo session", {
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return session;
+  }
 }
 
 function createSessionPayload(user: {

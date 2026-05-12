@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, CreditCard, Link2, Send, Tag, UserRound } from "lucide-react";
+import { CheckCircle2, CreditCard, Link2, RefreshCcw, Send, Tag, UserRound } from "lucide-react";
+import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import type { ConversationRecord, ConversationStatus, MessageRecord } from "@/lib/types";
 import { ConversationList } from "@/components/inbox/conversation-list";
@@ -34,37 +35,44 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
 
   const selected = conversations.find((conversation) => conversation.id === selectedId) ?? filtered[0];
 
-  async function send() {
+  async function send(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
     if (!selected || !body.trim()) return;
     setSending(true);
     setError(null);
 
-    const response = await fetch("/api/messages/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId: selected.id, body })
-    });
-    const json = (await response.json()) as { message?: MessageRecord; error?: string };
-    setSending(false);
+    try {
+      const response = await fetch("/api/messages/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: selected.id, body: body.trim() })
+      });
+      const json = (await response.json().catch(() => ({}))) as { message?: MessageRecord; error?: string };
 
-    if (!response.ok || !json.message) {
-      setError(json.error ?? "Não foi possível enviar.");
-      return;
+      if (!response.ok || !json.message) {
+        const staleConversation = json.error?.includes("Conversa");
+        setError(staleConversation ? "Essa conversa ficou desatualizada. Recarregue a inbox e tente responder novamente." : json.error ?? "Não foi possível enviar.");
+        return;
+      }
+
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === selected.id
+            ? {
+                ...conversation,
+                status: "WAITING_CUSTOMER",
+                lastMessageAt: json.message?.createdAt,
+                messages: [...conversation.messages, json.message as MessageRecord]
+              }
+            : conversation
+        )
+      );
+      setBody("");
+    } catch {
+      setError("Não foi possível conectar ao servidor. Recarregue a inbox e tente novamente.");
+    } finally {
+      setSending(false);
     }
-
-    setConversations((current) =>
-      current.map((conversation) =>
-        conversation.id === selected.id
-          ? {
-              ...conversation,
-              status: "WAITING_CUSTOMER",
-              lastMessageAt: json.message?.createdAt,
-              messages: [...conversation.messages, json.message as MessageRecord]
-            }
-          : conversation
-      )
-    );
-    setBody("");
   }
 
   return (
@@ -119,18 +127,18 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
 
             <footer className="border-t border-border/80 bg-white/95 p-4 backdrop-blur">
               {error ? <p className="mb-3 rounded-md bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
-              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+              <form onSubmit={send} className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <textarea
                   className="field min-h-24 resize-none py-3"
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
                   placeholder="Digite sua resposta pelo WhatsApp"
                 />
-                <button type="button" onClick={send} className={cn("btn-primary md:self-end", sending && "opacity-70")} disabled={sending || !body.trim()}>
-                  <Send className="h-4 w-4" aria-hidden="true" />
-                  Enviar
+                <button type="submit" className={cn("btn-primary md:self-end", sending && "opacity-70")} disabled={sending} aria-busy={sending}>
+                  {sending ? <RefreshCcw className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
+                  {sending ? "Enviando..." : "Enviar"}
                 </button>
-              </div>
+              </form>
             </footer>
           </>
         ) : (

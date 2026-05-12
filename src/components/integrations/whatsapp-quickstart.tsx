@@ -55,6 +55,11 @@ type QrState = {
   pairingCode?: string;
 };
 
+type SetupNotice = {
+  tone: "success" | "error" | "info";
+  text: string;
+};
+
 const setupSteps = [
   {
     title: "Subir Evolution local",
@@ -90,6 +95,7 @@ export function WhatsAppQuickstart() {
   const [to, setTo] = useState("");
   const [pairingPhone, setPairingPhone] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [setupNotice, setSetupNotice] = useState<SetupNotice | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [qr, setQr] = useState<QrState | null>(null);
 
@@ -115,6 +121,7 @@ EVOLUTION_API_BASE_URL=${status?.evolutionBaseUrl ?? "http://localhost:8080"}
 EVOLUTION_API_KEY=payflow-evolution-local-key
 EVOLUTION_INSTANCE_NAME=${status?.evolutionInstanceName ?? "payflow-local"}
 APP_URL=http://localhost:3000
+WHATSAPP_WEBHOOK_URL=http://host.docker.internal:3000/api/webhooks/whatsapp
 WHATSAPP_WEBHOOK_SECRET=`;
 
   async function copy(value?: string) {
@@ -126,6 +133,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
   async function runEvolutionAction(action: "create" | "connect" | "webhook") {
     setLoadingAction(action);
     setMessage(null);
+    setSetupNotice(null);
 
     const endpoint =
       action === "create"
@@ -143,18 +151,33 @@ WHATSAPP_WEBHOOK_SECRET=`;
     setLoadingAction(null);
 
     if (!response.ok) {
-      setMessage(json.error ?? "Falha ao executar acao Evolution.");
+      setSetupNotice({ tone: "error", text: json.error ?? "Falha ao executar acao Evolution." });
       return;
     }
 
     if (action === "connect") {
       const qrState = extractQr(json.result);
       setQr(qrState);
-      setMessage(qrState?.image || qrState?.code || qrState?.pairingCode ? "QR code atualizado." : "Conexao solicitada. Se o QR nao aparecer, abra o manager da Evolution.");
+      setSetupNotice({
+        tone: qrState?.image || qrState?.code || qrState?.pairingCode ? "success" : "info",
+        text: qrState?.image || qrState?.code || qrState?.pairingCode ? "QR code atualizado." : qrMissingMessage(json.result)
+      });
       return;
     }
 
-    setMessage(action === "create" ? "Instancia criada ou atualizada." : `Webhook configurado em ${json.webhookUrl ?? status?.webhookUrl ?? ""}`);
+    if (action === "create") {
+      const qrState = extractQr(json.result);
+      if (qrState?.image || qrState?.code || qrState?.pairingCode) {
+        setQr(qrState);
+        setSetupNotice({ tone: "success", text: "Instancia criada e QR code atualizado." });
+        return;
+      }
+    }
+
+    setSetupNotice({
+      tone: "success",
+      text: action === "create" ? "Instancia criada ou atualizada." : `Webhook configurado em ${json.webhookUrl ?? status?.webhookUrl ?? ""}`
+    });
   }
 
   async function sendTest(formData: FormData) {
@@ -271,6 +294,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
               Webhook
             </ActionButton>
           </div>
+          {setupNotice ? <SetupNoticeCard notice={setupNotice} /> : null}
           <QrPreview qr={qr} managerUrl={`${status?.evolutionBaseUrl ?? "http://localhost:8080"}/manager`} />
         </section>
       </div>
@@ -391,6 +415,23 @@ function ActionButton({ children, loading, onClick }: { children: ReactNode; loa
   );
 }
 
+function SetupNoticeCard({ notice }: { notice: SetupNotice }) {
+  const toneClass =
+    notice.tone === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : notice.tone === "error"
+        ? "border-red-200 bg-red-50 text-red-800"
+        : "border-blue-200 bg-blue-50 text-blue-800";
+  const Icon = notice.tone === "success" ? CheckCircle2 : AlertTriangle;
+
+  return (
+    <div className={cn("mt-3 flex items-start gap-2 rounded-md border p-3 text-sm font-medium", toneClass)}>
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>{notice.text}</span>
+    </div>
+  );
+}
+
 function QrPreview({ qr, managerUrl }: { qr: QrState | null; managerUrl: string }) {
   if (!qr) {
     return (
@@ -427,20 +468,63 @@ function QrPreview({ qr, managerUrl }: { qr: QrState | null; managerUrl: string 
 }
 
 function extractQr(result: unknown): QrState | null {
-  const data = result as {
-    base64?: string;
-    qrcode?: { base64?: string; code?: string };
-    code?: string;
-    pairingCode?: string;
-  } | null;
+  if (!isRecord(result)) return null;
 
-  if (!data) return null;
-  const base64 = data.base64 ?? data.qrcode?.base64;
-  const image = base64 ? (base64.startsWith("data:image") ? base64 : `data:image/png;base64,${base64}`) : undefined;
+  const qrcode = result.qrcode;
+  const qrcodeRecord = isRecord(qrcode) ? qrcode : null;
+  const qrcodeString = typeof qrcode === "string" ? qrcode : undefined;
+  const base64 =
+    readString(result, "image") ??
+    readString(result, "base64") ??
+    (qrcodeRecord ? readString(qrcodeRecord, "base64") : undefined) ??
+    (qrcodeString && looksLikeImageData(qrcodeString) ? qrcodeString : undefined);
+  const code =
+    readString(result, "code") ??
+    (qrcodeRecord ? readString(qrcodeRecord, "code") : undefined) ??
+    (qrcodeString && !looksLikeImageData(qrcodeString) ? qrcodeString : undefined);
+  const pairingCode = readString(result, "pairingCode") ?? (qrcodeRecord ? readString(qrcodeRecord, "pairingCode") : undefined);
+  const image = base64 ? normalizeQrImage(base64) : undefined;
+
+  if (!image && !code && !pairingCode) return null;
 
   return {
     image,
-    code: data.code ?? data.qrcode?.code,
-    pairingCode: data.pairingCode
+    code,
+    pairingCode
   };
+}
+
+function qrMissingMessage(result: unknown) {
+  if (isRecord(result)) {
+    const qrcode = result.qrcode;
+    const qrcodeRecord = isRecord(qrcode) ? qrcode : null;
+    const count = readNumber(result, "count") ?? (qrcodeRecord ? readNumber(qrcodeRecord, "count") : undefined);
+    if (count === 0) {
+      return "A Evolution respondeu sem QR (count 0). Atualize o container e tente Criar/Gerar QR novamente.";
+    }
+  }
+
+  return "Conexao solicitada. Se o QR nao aparecer, abra o manager da Evolution.";
+}
+
+function normalizeQrImage(value: string) {
+  return value.startsWith("data:image") ? value : `data:image/png;base64,${value}`;
+}
+
+function looksLikeImageData(value: string) {
+  return value.startsWith("data:image") || value.startsWith("iVBOR") || value.startsWith("/9j/");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function readString(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function readNumber(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  return typeof value === "number" ? value : undefined;
 }

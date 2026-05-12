@@ -38,7 +38,7 @@ services:
       - payflow-evolution-redis-data:/data
 
   evolution-api:
-    image: atendai/evolution-api:v2.1.1
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: payflow-evolution-api
     restart: unless-stopped
     depends_on:
@@ -66,6 +66,10 @@ services:
       CACHE_REDIS_URI: redis://evolution-redis:6379/0
       CACHE_REDIS_PREFIX_KEY: payflow_evolution
       CACHE_REDIS_SAVE_INSTANCES: "false"
+      CONFIG_SESSION_PHONE_CLIENT: "${CONFIG_SESSION_PHONE_CLIENT:-PayFlow}"
+      CONFIG_SESSION_PHONE_NAME: "${CONFIG_SESSION_PHONE_NAME:-Chrome}"
+      QRCODE_LIMIT: "${QRCODE_LIMIT:-60}"
+      QRCODE_COLOR: "${QRCODE_COLOR:-#001A42}"
       LOG_LEVEL: ERROR,WARN,INFO
     volumes:
       - payflow-evolution-instances:/evolution/instances
