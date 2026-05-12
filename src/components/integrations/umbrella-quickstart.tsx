@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, Copy, CreditCard, KeyRound, Play, RefreshCcw, ShieldCheck, Webhook } from "lucide-react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { IntegrationLogo, integrationBrands } from "@/components/integrations/integration-brand";
 import { cn } from "@/lib/utils";
 
 type UmbrellaStatus = {
@@ -256,9 +257,17 @@ APP_URL=https://pay-flow.shop`;
       <section className="overflow-hidden rounded-lg border border-white/10 bg-payflow-sidebar text-white shadow-premium">
         <div className="grid gap-0 lg:grid-cols-[1.08fr_0.92fr]">
           <div className="p-5 md:p-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 px-3 py-1 text-xs font-bold text-brand-cyan">
-              <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-              UmbrellaPag agora
+            <div className="flex items-center gap-3">
+              <IntegrationLogo
+                src={integrationBrands.UMBRELLA.asset}
+                alt={integrationBrands.UMBRELLA.assetAlt}
+                icon={integrationBrands.UMBRELLA.fallbackIcon}
+                className="h-12 w-12"
+              />
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 px-3 py-1 text-xs font-bold text-brand-cyan">
+                <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
+                UmbrellaPag agora
+              </div>
             </div>
             <h2 className="mt-4 max-w-3xl text-2xl font-bold md:text-3xl">Pagamentos alimentando recuperacao</h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-white/75">
@@ -476,7 +485,7 @@ APP_URL=https://pay-flow.shop`;
 
 function ConnectionRow({ label, ready, optional }: { label: string; ready: boolean; optional?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/8 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/10 px-3 py-2">
       <span className="text-sm text-white/75">{label}</span>
       <span className={cn("inline-flex items-center gap-1 text-xs font-bold", ready ? "text-brand-green" : optional ? "text-white/55" : "text-amber-200")}>
         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="title">
+  <title id="title">Webhook fallback icon</title>
+  <rect width="48" height="48" rx="12" fill="#EFF6FF"/>
+  <path d="M18 15h-2.5A6.5 6.5 0 0 0 9 21.5v0A6.5 6.5 0 0 0 15.5 28H19" fill="none" stroke="#0967FF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M30 33h2.5A6.5 6.5 0 0 0 39 26.5v0A6.5 6.5 0 0 0 32.5 20H29" fill="none" stroke="#16C8C7" stroke-width="3" stroke-linecap="round"/>
+  <path d="M19 24h10" stroke="#001A42" stroke-width="3" stroke-linecap="round"/>
+  <path d="M25 19l5 5-5 5" fill="none" stroke="#001A42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

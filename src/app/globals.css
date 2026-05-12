@@ -83,7 +83,7 @@ a {
 
 @layer components {
   .surface {
-    @apply rounded-lg border border-border/80 bg-white/90 shadow-premium backdrop-blur-sm;
+    @apply rounded-xl border border-border/80 bg-white/95 shadow-premium backdrop-blur-sm;
     box-shadow: var(--premium-shadow), inset 0 1px 0 rgb(255 255 255 / 0.72);
   }
 
@@ -92,7 +92,7 @@ a {
   }
 
   .btn {
-    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition duration-200 ease-out focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 ease-out focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
@@ -101,6 +101,14 @@ a {
 
   .btn-secondary {
     @apply btn border border-border/90 bg-white/90 text-foreground shadow-[var(--control-shadow)] hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white hover:text-primary active:translate-y-0;
+  }
+
+  .section-label {
+    @apply text-xs font-bold uppercase tracking-normal text-primary;
+  }
+
+  .operational-card {
+    @apply rounded-xl border border-border/80 bg-white p-4 shadow-inner-line transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft;
   }
 
   .btn-danger {

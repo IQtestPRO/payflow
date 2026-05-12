@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PayFlowLogo } from "@/components/brand/payflow-logo";
@@ -39,7 +39,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setLoading(false);
 
     if (!response.ok) {
-      setError(json.error ?? "Não foi possível continuar.");
+      setError(json.error ?? "Nao foi possivel continuar.");
       return;
     }
 
@@ -48,16 +48,20 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <form action={submit} className="surface p-6">
-      <div>
+    <form action={submit} className="surface overflow-hidden p-0">
+      <div className="border-b border-border/80 bg-gradient-to-br from-white via-blue-50/70 to-emerald-50/50 p-6">
         <PayFlowLogo size="md" />
-        <h1 className="mt-4 text-2xl font-bold">{mode === "login" ? "Entrar" : "Criar workspace"}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {mode === "login" ? "Use admin@payflow.local / admin123 para entrar no modo demo." : "Crie o primeiro usuário owner da sua empresa."}
+        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+          Acesso seguro
+        </div>
+        <h1 className="mt-3 text-2xl font-black">{mode === "login" ? "Entrar no PayFlow" : "Criar workspace"}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          {mode === "login" ? "Use o usuario seed para validar o ambiente e configurar as integracoes." : "Crie o primeiro usuario owner da sua empresa."}
         </p>
       </div>
 
-      <div className="mt-6 grid gap-4">
+      <div className="grid gap-4 p-6">
         {mode === "register" ? (
           <>
             <label className="grid gap-2 text-sm font-semibold">
@@ -79,14 +83,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
           Senha
           <input className="field" name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} defaultValue={mode === "login" ? "admin123" : ""} required />
         </label>
+
+        {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
+
+        <button type="submit" className="btn-primary w-full" disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+          {mode === "login" ? "Entrar" : "Cadastrar"}
+        </button>
       </div>
-
-      {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
-
-      <button type="submit" className="btn-primary mt-6 w-full" disabled={loading}>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-        {mode === "login" ? "Entrar" : "Cadastrar"}
-      </button>
     </form>
   );
 }

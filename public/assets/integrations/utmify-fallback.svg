@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="title">
+  <title id="title">Analytics fallback icon</title>
+  <rect width="48" height="48" rx="12" fill="#E7F7FF"/>
+  <path d="M13 32.5h22" stroke="#0967FF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M15 29l6.4-6.6 5.2 4.2L34 16" fill="none" stroke="#16C8C7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="15" cy="29" r="3" fill="#0967FF"/>
+  <circle cx="21.4" cy="22.4" r="3" fill="#16C8C7"/>
+  <circle cx="26.6" cy="26.6" r="3" fill="#3BEA8D"/>
+  <circle cx="34" cy="16" r="3" fill="#001A42"/>
+</svg>

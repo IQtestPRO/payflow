@@ -21,6 +21,7 @@ import {
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { IntegrationLogo, integrationBrands } from "@/components/integrations/integration-brand";
 import { cn } from "@/lib/utils";
 
 type WhatsAppStatus = {
@@ -202,9 +203,17 @@ WHATSAPP_WEBHOOK_SECRET=`;
       <section className="overflow-hidden rounded-lg border border-white/10 bg-payflow-sidebar text-white shadow-premium">
         <div className="grid gap-0 lg:grid-cols-[1.12fr_0.88fr]">
           <div className="p-5 md:p-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-green/30 bg-brand-green/10 px-3 py-1 text-xs font-bold text-brand-green">
-              <Zap className="h-3.5 w-3.5" aria-hidden="true" />
-              WhatsApp primeiro: QR code local
+            <div className="flex items-center gap-3">
+              <IntegrationLogo
+                src={integrationBrands.WHATSAPP.asset}
+                alt={integrationBrands.WHATSAPP.assetAlt}
+                icon={integrationBrands.WHATSAPP.fallbackIcon}
+                className="h-12 w-12"
+              />
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-green/30 bg-brand-green/10 px-3 py-1 text-xs font-bold text-brand-green">
+                <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                WhatsApp primeiro: QR code local
+              </div>
             </div>
             <h2 className="mt-4 max-w-3xl text-2xl font-bold md:text-3xl">Conectar o WhatsApp agora, sem BM verificada</h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-white/75">
@@ -372,7 +381,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
 
 function ConnectionRow({ label, ready }: { label: string; ready: boolean }) {
   return (
-    <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/8 px-3 py-2">
+    <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/10 px-3 py-2">
       <span className="text-sm text-white/75">{label}</span>
       <span className={cn("inline-flex items-center gap-1 text-xs font-bold", ready ? "text-brand-green" : "text-amber-200")}>
         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />

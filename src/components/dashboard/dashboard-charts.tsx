@@ -80,7 +80,7 @@ function ChartFrame({ title, eyebrow, children }: { title: string; eyebrow: stri
         </div>
         <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-brand-blue to-brand-green shadow-[0_0_0_5px_rgb(9_103_255/0.08)]" />
       </div>
-      <div className="mt-4 h-[260px] rounded-md border border-border/60 bg-white/60 p-2">{children}</div>
+      <div className="mt-4 h-[260px] p-1">{children}</div>
     </section>
   );
 }
