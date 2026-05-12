@@ -15,6 +15,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - payflow-evolution-caddy-data:/data
       - payflow-evolution-caddy-config:/config
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   evolution-postgres:
     image: postgres:16-alpine
@@ -31,6 +36,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging: *default-logging
 
   evolution-redis:
     image: redis:7-alpine
@@ -44,6 +50,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging: *default-logging
 
   evolution-api:
     image: evoapicloud/evolution-api:v2.3.7
@@ -79,6 +86,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-ERROR,WARN,INFO}
     volumes:
       - payflow-evolution-instances:/evolution/instances
+    logging: *default-logging
 
 volumes:
   payflow-evolution-caddy-data:
