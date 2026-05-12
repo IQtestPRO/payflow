@@ -12,12 +12,14 @@ public/assets/integrations
 - `meta.svg`: marca vetorial da Meta.
 - `facebook.svg`: marca vetorial do Facebook.
 - `instagram.svg`: marca vetorial do Instagram.
+- `umbrella.svg`: logo da UmbrellaPag fornecido pelo usuario.
+- `utmify.svg`: logo da UTMify fornecido pelo usuario.
 
 Esses arquivos foram adicionados localmente para evitar hotlink externo.
 
 ## Fallbacks neutros
 
-Nao foi encontrada no projeto uma fonte oficial confiavel para os logos abaixo. Para nao inventar logo de marca, foram usados icones neutros coerentes com a funcao:
+Os arquivos abaixo continuam no projeto como reserva para blocos genericos ou casos em que o logo de marca precise ser trocado por um icone funcional:
 
 - `utmify-fallback.svg`: analytics/rastreamento para UTMify.
 - `umbrella-fallback.svg`: pagamentos/checkout para UmbrellaPag.

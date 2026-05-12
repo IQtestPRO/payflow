@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Logo Umbrella</title>
+  <g transform="translate(32 32)">
+    <path d="M0 0 L0 -29 L11 -21 L8 0 Z" fill="#f41e2b" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L11 -21 L26 -12 L8 0 Z" fill="#ffffff" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L26 -12 L29 0 L8 0 Z" fill="#f41e2b" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L29 0 L21 11 L0 8 Z" fill="#ffffff" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L21 11 L12 26 L0 8 Z" fill="#f41e2b" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L12 26 L0 29 L0 8 Z" fill="#ffffff" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L0 29 L-11 21 L-8 0 Z" fill="#f41e2b" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L-11 21 L-26 12 L-8 0 Z" fill="#ffffff" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L-26 12 L-29 0 L-8 0 Z" fill="#f41e2b" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L-29 0 L-21 -11 L0 -8 Z" fill="#ffffff" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L-21 -11 L-12 -26 L0 -8 Z" fill="#f41e2b" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M0 0 L-12 -26 L0 -29 L0 -8 Z" fill="#ffffff" stroke="#050505" stroke-width="1.35" stroke-linejoin="round"/>
+    <circle r="3.1" fill="#050505"/>
+  </g>
+</svg>
