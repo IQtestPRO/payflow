@@ -162,6 +162,7 @@ A Evolution API pode rodar depois em uma VM na AWS, mas trate Free Tier/creditos
 O app Next.js pode ser hospedado na Vercel com dominio proprio. Use o guia em `docs/vercel-deploy.md`.
 
 Para a publicacao oficial em `pay-flow.shop`, use tambem `docs/production-launch-checklist.md`.
+Para hospedar a Evolution API na Oracle Always Free, use `docs/oracle-evolution-free-tier.md`.
 
 Resumo:
 
