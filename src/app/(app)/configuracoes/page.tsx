@@ -51,19 +51,19 @@ export default function SettingsPage() {
         </SettingsBlock>
       </section>
 
-      <section className="surface p-5">
+      <section className="data-panel p-5">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
             <MessageCircle className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <p className="section-label">Operacao WhatsApp</p>
-            <h2 className="text-lg font-bold">Regras aplicadas em envios e recuperacao</h2>
+            <h2 className="text-lg font-extrabold">Regras aplicadas em envios e recuperação</h2>
           </div>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {["Opt-out respeitado", "Janela de horario ativa", "Pagamento aprovado encerra fluxo"].map((item) => (
-            <div key={item} className="rounded-lg border border-border bg-white px-4 py-3 text-sm font-semibold shadow-inner-line">
+            <div key={item} className="rounded-lg border border-border/80 bg-white/[0.96] px-4 py-3 text-sm font-semibold shadow-inner-line">
               {item}
             </div>
           ))}
@@ -85,11 +85,11 @@ function SettingsBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="surface p-5">
+    <section className="data-panel p-5">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-primary">{icon}</div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-blue-50 text-primary">{icon}</div>
         <div>
-          <h2 className="font-bold">{title}</h2>
+          <h2 className="font-extrabold">{title}</h2>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
         </div>
       </div>

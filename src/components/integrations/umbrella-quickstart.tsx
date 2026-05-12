@@ -264,7 +264,7 @@ APP_URL=https://pay-flow.shop`;
                 icon={integrationBrands.UMBRELLA.fallbackIcon}
                 className="h-12 w-12"
               />
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 px-3 py-1 text-xs font-bold text-brand-cyan">
+              <div className="inline-flex items-center gap-2 rounded-md border border-brand-cyan/30 bg-brand-cyan/10 px-3 py-1 text-xs font-bold text-brand-cyan">
                 <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
                 UmbrellaPag agora
               </div>
@@ -278,7 +278,7 @@ APP_URL=https://pay-flow.shop`;
                 <Copy className="h-4 w-4" aria-hidden="true" />
                 Copiar webhook
               </button>
-              <a className="btn min-h-10 border border-white/10 bg-white/10 text-white hover:bg-white/15" href="/pagamentos">
+              <a className="btn min-h-10 border border-white/10 bg-white/10 text-white hover:bg-white/20" href="/pagamentos">
                 <CreditCard className="h-4 w-4" aria-hidden="true" />
                 Ver pagamentos
               </a>
@@ -303,13 +303,13 @@ APP_URL=https://pay-flow.shop`;
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_430px]">
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-lg font-bold">Ativacao Umbrella</h3>
               <p className="mt-1 text-sm text-muted-foreground">O caminho minimo para pagamentos entrarem no PayFlow.</p>
             </div>
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-primary">
+            <span className="inline-flex w-fit items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Lead real obrigatorio
             </span>
@@ -318,7 +318,7 @@ APP_URL=https://pay-flow.shop`;
             {steps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <div key={step.title} className="rounded-lg border border-border bg-white p-4">
+                <div key={step.title} className="rounded-lg border border-border/80 bg-white/[0.96] p-4 shadow-inner-line transition duration-200 hover:-translate-y-0.5 hover:border-primary/20">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-navy text-white">
                       <Icon className="h-5 w-5" aria-hidden="true" />
@@ -335,7 +335,7 @@ APP_URL=https://pay-flow.shop`;
           </div>
         </section>
 
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex items-center gap-2">
             <Webhook className="h-5 w-5 text-primary" aria-hidden="true" />
             <h3 className="text-lg font-bold">Webhook oficial</h3>
@@ -353,7 +353,7 @@ APP_URL=https://pay-flow.shop`;
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex items-center gap-2">
             <Play className="h-5 w-5 text-primary" aria-hidden="true" />
             <h3 className="text-lg font-bold">Pagamento com lead real</h3>
@@ -467,7 +467,7 @@ APP_URL=https://pay-flow.shop`;
           ) : null}
         </section>
 
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
             <h3 className="text-lg font-bold">Variaveis de producao</h3>
@@ -494,7 +494,7 @@ function ConnectionRow({ label, ready, optional }: { label: string; ready: boole
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/10 px-3 py-2">
       <span className="text-sm text-white/75">{label}</span>
-      <span className={cn("inline-flex items-center gap-1 text-xs font-bold", ready ? "text-brand-green" : optional ? "text-white/55" : "text-amber-200")}>
+      <span className={cn("inline-flex items-center gap-1 text-xs font-bold", ready ? "text-brand-green" : optional ? "text-white/60" : "text-amber-200")}>
         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
         {ready ? "pronto" : optional ? "opcional" : "pendente"}
       </span>

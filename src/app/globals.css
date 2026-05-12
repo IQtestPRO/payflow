@@ -1,25 +1,27 @@
-@import url("https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: 218 52% 97%;
-  --foreground: 220 82% 12%;
-  --card: 0 0% 100%;
-  --border: 216 43% 88%;
-  --muted: 215 48% 95%;
-  --muted-foreground: 217 22% 36%;
+  --background: 218 42% 96%;
+  --foreground: 221 70% 10%;
+  --card: 220 38% 99%;
+  --border: 217 36% 86%;
+  --muted: 217 42% 94%;
+  --muted-foreground: 217 20% 34%;
   --primary: 216 100% 52%;
   --primary-foreground: 0 0% 100%;
   --accent: 153 80% 57%;
   --success: 154 72% 43%;
   --warning: 35 92% 40%;
   --destructive: 0 72% 51%;
-  --surface-line: 216 45% 86%;
-  --premium-shadow: 0 18px 50px -28px rgb(0 26 66 / 0.55);
-  --control-shadow: 0 10px 28px -22px rgb(0 26 66 / 0.5);
+  --surface-line: 217 38% 84%;
+  --surface-command: 221 70% 10%;
+  --premium-shadow: 0 22px 60px -44px rgb(0 26 66 / 0.72);
+  --control-shadow: 0 12px 30px -24px rgb(0 26 66 / 0.48);
+  --ease-command: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 * {
@@ -28,20 +30,21 @@
 
 html {
   min-height: 100%;
-  background: #f7faff;
+  background: #f5f8fc;
 }
 
 body {
   min-height: 100vh;
   margin: 0;
   background:
-    linear-gradient(rgba(0, 26, 66, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 26, 66, 0.035) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.99) 0%, rgba(247, 250, 255, 0.96) 46%, rgba(239, 247, 255, 0.94) 100%),
+    linear-gradient(rgba(0, 26, 66, 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 26, 66, 0.026) 1px, transparent 1px),
+    radial-gradient(circle at 50% -10%, rgba(9, 103, 255, 0.1), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 249, 253, 0.97) 46%, rgba(236, 244, 253, 0.94) 100%),
     hsl(var(--background));
-  background-size: 28px 28px, 28px 28px, auto, auto;
+  background-size: 32px 32px, 32px 32px, auto, auto, auto;
   color: hsl(var(--foreground));
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Geist, system-ui, sans-serif;
   letter-spacing: 0;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
@@ -53,6 +56,13 @@ input,
 select,
 textarea {
   outline-color: hsl(var(--primary));
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
 }
 
 :focus-visible {
@@ -83,24 +93,24 @@ a {
 
 @layer components {
   .surface {
-    @apply rounded-xl border border-border/80 bg-white/95 shadow-premium backdrop-blur-sm;
-    box-shadow: var(--premium-shadow), inset 0 1px 0 rgb(255 255 255 / 0.72);
+    @apply rounded-lg border border-border/80 bg-white/[0.96] shadow-command backdrop-blur-sm;
   }
 
   .field {
-    @apply h-11 w-full rounded-md border border-border/90 bg-white/90 px-3 text-sm font-medium text-foreground shadow-[var(--control-shadow)] transition duration-200 placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20;
+    @apply h-11 w-full rounded-md border border-border/90 bg-white/95 px-3 text-sm font-medium text-foreground shadow-[var(--control-shadow)] transition duration-200 placeholder:text-muted-foreground/60 hover:border-primary/40 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20;
   }
 
   .btn {
-    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 ease-out focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition duration-200 focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50;
+    transition-timing-function: var(--ease-command);
   }
 
   .btn-primary {
-    @apply btn border border-primary/10 bg-gradient-to-r from-brand-blue via-brand-electric to-brand-cyan text-primary-foreground shadow-glow hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0;
+    @apply btn border border-primary/10 bg-brand-blue text-primary-foreground shadow-[0_14px_34px_-24px_rgb(9_103_255/0.8)] hover:-translate-y-0.5 hover:bg-brand-electric active:translate-y-0 active:scale-[0.99];
   }
 
   .btn-secondary {
-    @apply btn border border-border/90 bg-white/90 text-foreground shadow-[var(--control-shadow)] hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white hover:text-primary active:translate-y-0;
+    @apply btn border border-border/90 bg-white/[0.92] text-foreground shadow-[var(--control-shadow)] hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:text-primary active:translate-y-0 active:scale-[0.99];
   }
 
   .section-label {
@@ -108,11 +118,12 @@ a {
   }
 
   .operational-card {
-    @apply rounded-xl border border-border/80 bg-white p-4 shadow-inner-line transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft;
+    @apply rounded-lg border border-border/80 bg-white/[0.96] p-4 shadow-inner-line transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft;
+    transition-timing-function: var(--ease-command);
   }
 
   .btn-danger {
-    @apply btn border border-red-500/10 bg-destructive text-white shadow-sm shadow-red-950/10 hover:-translate-y-0.5 hover:bg-destructive/90 active:translate-y-0;
+    @apply btn border border-red-500/10 bg-destructive text-white shadow-sm shadow-red-950/10 hover:-translate-y-0.5 hover:bg-destructive/90 active:translate-y-0 active:scale-[0.99];
   }
 
   .premium-panel {
@@ -125,12 +136,42 @@ a {
     inset: 0;
     pointer-events: none;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0) 34%),
-      linear-gradient(90deg, rgba(9, 103, 255, 0.08), rgba(22, 200, 199, 0.04) 52%, rgba(59, 234, 141, 0.06));
-    opacity: 0.72;
+      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 34%),
+      linear-gradient(90deg, rgba(9, 103, 255, 0.052), rgba(22, 200, 199, 0.028) 52%, rgba(59, 234, 141, 0.038));
+    opacity: 0.84;
   }
 
   .premium-panel > * {
     position: relative;
+  }
+
+  .command-panel {
+    @apply rounded-lg border border-white/10 bg-payflow-sidebar text-white shadow-premium;
+  }
+
+  .data-panel {
+    @apply rounded-lg border border-border/80 bg-white/[0.96] shadow-command;
+  }
+
+  .toolbar {
+    @apply rounded-lg border border-border/80 bg-white/[0.96] p-3 shadow-command;
+  }
+
+  .control-chip {
+    @apply inline-flex min-h-9 items-center gap-2 rounded-md border border-border/80 bg-white/90 px-3 text-xs font-bold text-muted-foreground shadow-sm transition duration-200 hover:border-primary/25 hover:text-primary;
+    transition-timing-function: var(--ease-command);
+  }
+
+  .live-dot {
+    @apply inline-block h-2 w-2 rounded-full bg-brand-green shadow-[0_0_0_5px_rgb(59_234_141/0.12)];
+  }
+
+  .num {
+    @apply font-mono tabular-nums tracking-normal;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded-md bg-gradient-to-r from-slate-100 via-white to-slate-100;
+    background-size: 220% 100%;
   }
 }

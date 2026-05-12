@@ -26,9 +26,9 @@ export function IntegrationCard({ integration }: { integration: IntegrationRecor
   }
 
   return (
-    <article className="surface group overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-glow">
-      <div className={cn("relative border-b border-border/80 bg-gradient-to-br p-5", meta.softBg)}>
-        <div className={cn("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", meta.line)} />
+    <article className="data-panel group overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft">
+      <div className={cn("relative border-b border-border/80 p-5", meta.softBg)}>
+        <div className={cn("absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r", meta.line)} />
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <IntegrationLogo src={meta.asset} alt={meta.assetAlt} icon={meta.fallbackIcon} />
@@ -43,9 +43,9 @@ export function IntegrationCard({ integration }: { integration: IntegrationRecor
         <p className="mt-4 min-h-12 text-sm leading-6 text-muted-foreground">{meta.description}</p>
       </div>
 
-      <div className="bg-white/80 p-5">
+      <div className="bg-white/[0.92] p-5">
         <div className="grid gap-2">
-          <Link className={cn("btn-primary w-full", integration.status === "ERROR" && "from-red-500 via-red-500 to-orange-400")} href={meta.detailsHref}>
+          <Link className={cn("btn-primary w-full", integration.status === "ERROR" && "bg-destructive hover:bg-destructive/90")} href={meta.detailsHref}>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
             {cta}
           </Link>
@@ -55,7 +55,7 @@ export function IntegrationCard({ integration }: { integration: IntegrationRecor
           </button>
         </div>
 
-        <div className="mt-4 rounded-lg border border-border/70 bg-slate-50/70 p-3">
+        <div className="mt-4 rounded-lg border border-border/70 bg-slate-50/75 p-3 shadow-inner-line">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-normal text-muted-foreground">Eventos recentes</p>
             <Activity className="h-4 w-4 text-muted-foreground" aria-hidden="true" />

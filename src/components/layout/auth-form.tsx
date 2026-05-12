@@ -48,14 +48,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <form action={submit} className="surface overflow-hidden p-0">
-      <div className="border-b border-border/80 bg-gradient-to-br from-white via-blue-50/70 to-emerald-50/50 p-6">
+    <form action={submit} className="data-panel overflow-hidden p-0">
+      <div className="border-b border-border/80 bg-white/[0.96] p-6">
         <PayFlowLogo size="md" />
-        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+        <div className="mt-5 inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
           Acesso seguro
         </div>
-        <h1 className="mt-3 text-2xl font-black">{mode === "login" ? "Entrar no PayFlow" : "Criar workspace"}</h1>
+        <h1 className="mt-3 text-2xl font-extrabold">{mode === "login" ? "Entrar no PayFlow" : "Criar workspace"}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {mode === "login" ? "Use o usuario seed para validar o ambiente e configurar as integracoes." : "Crie o primeiro usuario owner da sua empresa."}
         </p>

@@ -6,7 +6,7 @@ import type { ReportRow } from "@/lib/types";
 export function ReportsTable({ rows }: { rows: ReportRow[] }) {
   return (
     <div className="grid gap-4">
-      <div className="surface grid gap-3 p-4 md:grid-cols-4">
+      <div className="toolbar grid gap-3 md:grid-cols-4">
         <input className="field" type="date" aria-label="Data inicial" />
         <input className="field" type="date" aria-label="Data final" />
         <select className="field" aria-label="Status de pagamento" defaultValue="">

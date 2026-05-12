@@ -17,7 +17,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             {(["WHATSAPP", "UMBRELLA", "UTMIFY", "META_ADS"] as const).map((provider) => {
               const brand = integrationBrands[provider];
               return (
-                <div key={provider} className="rounded-xl border border-white/10 bg-white/[0.08] p-3">
+                <div key={provider} className="rounded-lg border border-white/10 bg-white/[0.08] p-3">
                   <IntegrationLogo src={brand.asset} alt={brand.assetAlt} icon={brand.fallbackIcon} className="h-11 w-11 rounded-lg" imageClassName="h-6 w-6" />
                 </div>
               );
@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
         <div className="grid gap-3">
           {["Conecte WhatsApp e responda pela inbox", "Gere pagamentos pela UmbrellaPag", "Rastreie UTMs, campanhas e recuperacoes"].map((item) => (
-            <div key={item} className="rounded-xl border border-white/10 bg-white/10 p-4 text-sm font-semibold text-white shadow-inner">
+            <div key={item} className="rounded-lg border border-white/10 bg-white/10 p-4 text-sm font-semibold text-white shadow-inner">
               {item}
             </div>
           ))}

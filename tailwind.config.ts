@@ -30,15 +30,16 @@ const config: Config = {
         destructive: "hsl(var(--destructive))"
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
-        display: ["Calistoga", "Georgia", "serif"]
+        sans: ["Geist", "system-ui", "sans-serif"],
+        mono: ["Geist Mono", "JetBrains Mono", "monospace"],
+        display: ["Geist", "system-ui", "sans-serif"]
       },
       boxShadow: {
-        soft: "0 10px 30px -20px rgb(15 23 42 / 0.35)",
-        premium: "0 18px 50px -28px rgb(0 26 66 / 0.55)",
-        glow: "0 0 0 1px rgb(22 200 199 / 0.12), 0 18px 55px -32px rgb(9 103 255 / 0.7)",
-        "inner-line": "inset 0 1px 0 rgb(255 255 255 / 0.72)"
+        soft: "0 12px 34px -26px rgb(0 26 66 / 0.38)",
+        premium: "0 22px 60px -44px rgb(0 26 66 / 0.72)",
+        glow: "0 0 0 1px rgb(22 200 199 / 0.16), 0 16px 46px -34px rgb(9 103 255 / 0.62)",
+        "inner-line": "inset 0 1px 0 rgb(255 255 255 / 0.74)",
+        command: "0 1px 0 rgb(255 255 255 / 0.86) inset, 0 18px 46px -38px rgb(0 26 66 / 0.72)"
       },
       backgroundImage: {
         "payflow-mesh":

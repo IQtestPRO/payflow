@@ -16,12 +16,12 @@ export default async function CampaignsPage() {
         description="Trafego pago com gasto, cliques, CTR, CPC, CPA, ROAS e receita atribuida por campanha."
         actions={<IntegrationLogo src={meta.asset} alt={meta.assetAlt} icon={meta.fallbackIcon} />}
       />
-      <section className="surface p-4">
+      <section className="toolbar">
         <div className="mb-4 flex items-center gap-3">
           <IntegrationLogo src={meta.asset} alt={meta.assetAlt} icon={meta.fallbackIcon} className="h-10 w-10 rounded-md" imageClassName="h-6 w-6" />
           <div>
             <p className="section-label">Meta Ads e UTM</p>
-            <h2 className="font-bold">Filtros de performance</h2>
+            <h2 className="font-extrabold">Filtros de performance</h2>
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-5">

@@ -50,7 +50,7 @@ export function ProductsManager({ initialProducts }: { initialProducts: ProductR
 
   return (
     <div className="grid gap-4">
-      <form action={create} className="surface grid gap-3 p-4 lg:grid-cols-[1fr_1fr_120px_160px_auto]">
+      <form action={create} className="toolbar grid gap-3 lg:grid-cols-[1fr_1fr_120px_160px_auto]">
         <input className="field" name="name" placeholder="Nome do produto" required />
         <input className="field" name="description" placeholder="Descrição curta" />
         <input className="field" name="price" type="number" step="0.01" placeholder="Preço" required />

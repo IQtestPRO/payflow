@@ -9,8 +9,8 @@ export function MessageBubble({ message }: { message: MessageRecord }) {
     <div className={cn("flex", outbound ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[78%] rounded-lg px-4 py-3 text-sm leading-6 shadow-sm",
-          outbound ? "bg-primary text-primary-foreground" : internal ? "bg-amber-50 text-amber-900" : "border border-border bg-white text-foreground"
+          "max-w-[88%] rounded-md px-4 py-3 text-sm leading-6 shadow-sm md:max-w-[78%]",
+          outbound ? "bg-primary text-primary-foreground shadow-blue-900/10" : internal ? "border border-amber-200 bg-amber-50 text-amber-900" : "border border-border bg-white text-foreground"
         )}
       >
         <p>{message.body}</p>

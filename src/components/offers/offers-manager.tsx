@@ -61,7 +61,7 @@ export function OffersManager({ initialOffers, products }: { initialOffers: Offe
 
   return (
     <div className="grid gap-4">
-      <form action={create} className="surface grid gap-3 p-4 xl:grid-cols-4">
+      <form action={create} className="toolbar grid gap-3 xl:grid-cols-4">
         <input className="field" name="name" placeholder="Nome da oferta" required />
         <select className="field" name="productId" defaultValue="">
           <option value="">Produto vinculado</option>

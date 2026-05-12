@@ -72,13 +72,13 @@ export function DashboardCharts({ snapshot }: { snapshot: DashboardSnapshot }) {
 
 function ChartFrame({ title, eyebrow, children }: { title: string; eyebrow: string; children: React.ReactNode }) {
   return (
-    <section className="surface overflow-hidden p-4">
-      <div className="flex items-start justify-between gap-3">
+    <section className="data-panel overflow-hidden p-4 transition duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-soft">
+      <div className="flex items-start justify-between gap-3 border-b border-border/70 pb-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-normal text-primary">{eyebrow}</p>
-          <h2 className="mt-1 text-base font-bold text-foreground">{title}</h2>
+          <p className="text-[11px] font-extrabold uppercase tracking-normal text-primary">{eyebrow}</p>
+          <h2 className="mt-1 text-base font-extrabold text-foreground">{title}</h2>
         </div>
-        <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-brand-blue to-brand-green shadow-[0_0_0_5px_rgb(9_103_255/0.08)]" />
+        <span className="mt-1 h-2.5 w-2.5 rounded-sm bg-primary/70" aria-hidden="true" />
       </div>
       <div className="mt-4 h-[260px] p-1">{children}</div>
     </section>

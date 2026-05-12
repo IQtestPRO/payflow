@@ -2,36 +2,37 @@ import { AlertCircle, CheckCircle2, Clock, PauseCircle, Radio, XCircle } from "l
 import { cn } from "@/lib/utils";
 
 const toneByStatus: Record<string, string> = {
-  ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-900/5",
-  CONNECTED: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-900/5",
-  PAID: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-900/5",
-  SENT: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-900/5",
-  CONVERTED: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-900/5",
-  BUYER: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-900/5",
-  RECOVERED: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-900/5",
-  OPEN: "bg-blue-50 text-blue-700 border-blue-200 shadow-blue-900/5",
-  NEW: "bg-blue-50 text-blue-700 border-blue-200 shadow-blue-900/5",
-  SCHEDULED: "bg-blue-50 text-blue-700 border-blue-200 shadow-blue-900/5",
-  IN_SERVICE: "bg-cyan-50 text-cyan-700 border-cyan-200 shadow-cyan-900/5",
-  UNANSWERED: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-900/5",
-  PAYMENT_PENDING: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-900/5",
-  PENDING: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-900/5",
-  WAITING_PAYMENT: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-900/5",
-  PIX_GENERATED: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-900/5",
-  BOLETO_GENERATED: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-900/5",
-  RECOVERY: "bg-orange-50 text-orange-700 border-orange-200 shadow-orange-900/5",
-  MOCK: "bg-violet-50 text-violet-700 border-violet-200 shadow-violet-900/5",
-  PAUSED: "bg-slate-50 text-slate-700 border-slate-200 shadow-slate-900/5",
-  DISCONNECTED: "bg-slate-50 text-slate-700 border-slate-200 shadow-slate-900/5",
-  RESOLVED: "bg-slate-50 text-slate-700 border-slate-200 shadow-slate-900/5",
-  ARCHIVED: "bg-slate-50 text-slate-700 border-slate-200 shadow-slate-900/5",
-  REFUNDED: "bg-slate-50 text-slate-700 border-slate-200 shadow-slate-900/5",
-  ERROR: "bg-red-50 text-red-700 border-red-200 shadow-red-900/5",
-  FAILED: "bg-red-50 text-red-700 border-red-200 shadow-red-900/5",
-  EXPIRED: "bg-red-50 text-red-700 border-red-200 shadow-red-900/5",
-  CANCELLED: "bg-red-50 text-red-700 border-red-200 shadow-red-900/5",
-  CHARGEBACK: "bg-red-50 text-red-700 border-red-200 shadow-red-900/5",
-  LOST: "bg-red-50 text-red-700 border-red-200 shadow-red-900/5"
+  ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  CONNECTED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  PAID: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  SENT: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  CONVERTED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  BUYER: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  RECOVERED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  OPEN: "bg-blue-50 text-blue-700 border-blue-200",
+  NEW: "bg-blue-50 text-blue-700 border-blue-200",
+  SCHEDULED: "bg-blue-50 text-blue-700 border-blue-200",
+  IN_SERVICE: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  WAITING_CUSTOMER: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  UNANSWERED: "bg-amber-50 text-amber-700 border-amber-200",
+  PAYMENT_PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  WAITING_PAYMENT: "bg-amber-50 text-amber-700 border-amber-200",
+  PIX_GENERATED: "bg-amber-50 text-amber-700 border-amber-200",
+  BOLETO_GENERATED: "bg-amber-50 text-amber-700 border-amber-200",
+  RECOVERY: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  MOCK: "bg-slate-50 text-slate-700 border-slate-200",
+  PAUSED: "bg-slate-50 text-slate-700 border-slate-200",
+  DISCONNECTED: "bg-slate-50 text-slate-700 border-slate-200",
+  RESOLVED: "bg-slate-50 text-slate-700 border-slate-200",
+  ARCHIVED: "bg-slate-50 text-slate-700 border-slate-200",
+  REFUNDED: "bg-slate-50 text-slate-700 border-slate-200",
+  ERROR: "bg-red-50 text-red-700 border-red-200",
+  FAILED: "bg-red-50 text-red-700 border-red-200",
+  EXPIRED: "bg-red-50 text-red-700 border-red-200",
+  CANCELLED: "bg-red-50 text-red-700 border-red-200",
+  CHARGEBACK: "bg-red-50 text-red-700 border-red-200",
+  LOST: "bg-red-50 text-red-700 border-red-200"
 };
 
 const labelByStatus: Record<string, string> = {
@@ -83,7 +84,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
               : Radio;
 
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold shadow-sm ring-1 ring-white/60", toneByStatus[status] ?? "bg-slate-50 text-slate-700 border-slate-200", className)}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-normal shadow-sm ring-1 ring-white/60", toneByStatus[status] ?? "bg-slate-50 text-slate-700 border-slate-200", className)}>
       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
       {labelByStatus[status] ?? status}
     </span>

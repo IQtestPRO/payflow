@@ -210,7 +210,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
                 icon={integrationBrands.WHATSAPP.fallbackIcon}
                 className="h-12 w-12"
               />
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-green/30 bg-brand-green/10 px-3 py-1 text-xs font-bold text-brand-green">
+              <div className="inline-flex items-center gap-2 rounded-md border border-brand-green/30 bg-brand-green/10 px-3 py-1 text-xs font-bold text-brand-green">
                 <Zap className="h-3.5 w-3.5" aria-hidden="true" />
                 WhatsApp primeiro: QR code local
               </div>
@@ -224,7 +224,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
                 <Terminal className="h-4 w-4" aria-hidden="true" />
                 Copiar comando Docker
               </button>
-              <a className="btn min-h-10 border border-white/10 bg-white/10 text-white hover:bg-white/15" href="/inbox">
+              <a className="btn min-h-10 border border-white/10 bg-white/10 text-white hover:bg-white/20" href="/inbox">
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
                 Ver inbox
               </a>
@@ -248,13 +248,13 @@ WHATSAPP_WEBHOOK_SECRET=`;
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_430px]">
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-lg font-bold">Ativacao guiada</h3>
               <p className="mt-1 text-sm text-muted-foreground">O minimo necessario para colocar o numero respondendo pelo PayFlow.</p>
             </div>
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+            <span className="inline-flex w-fit items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
               <Wifi className="h-3.5 w-3.5" aria-hidden="true" />
               Local e gratuito
             </span>
@@ -263,7 +263,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
             {setupSteps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <div key={step.title} className="rounded-lg border border-border bg-white p-4">
+                <div key={step.title} className="rounded-lg border border-border/80 bg-white/[0.96] p-4 shadow-inner-line transition duration-200 hover:-translate-y-0.5 hover:border-primary/20">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-navy text-white">
                       <Icon className="h-5 w-5" aria-hidden="true" />
@@ -280,7 +280,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
           </div>
         </section>
 
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex items-center gap-2">
             <QrCode className="h-5 w-5 text-primary" aria-hidden="true" />
             <h3 className="text-lg font-bold">QR code da instancia</h3>
@@ -309,7 +309,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex items-center gap-2">
             <LockKeyhole className="h-5 w-5 text-primary" aria-hidden="true" />
             <h3 className="text-lg font-bold">Variaveis locais</h3>
@@ -321,7 +321,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
           </div>
         </section>
 
-        <section className="surface p-5">
+        <section className="data-panel p-5">
           <div className="flex items-center gap-2">
             <Webhook className="h-5 w-5 text-primary" aria-hidden="true" />
             <h3 className="text-lg font-bold">Webhook PayFlow</h3>
@@ -333,7 +333,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
           <div className="mt-4 grid gap-2">
             {flow.map((item, index) => (
               <div key={item} className="flex items-center gap-3 text-sm">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-primary">{index + 1}</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold text-primary">{index + 1}</span>
                 <span>{item}</span>
               </div>
             ))}
@@ -341,7 +341,7 @@ WHATSAPP_WEBHOOK_SECRET=`;
         </section>
       </div>
 
-      <section className="surface p-5">
+      <section className="data-panel p-5">
         <div className="grid gap-5 lg:grid-cols-[1fr_420px]">
           <div>
             <div className="flex items-center gap-2">
