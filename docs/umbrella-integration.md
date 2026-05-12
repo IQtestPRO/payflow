@@ -18,7 +18,7 @@ http://localhost:3000/api/webhooks/umbrella
 
 ## Variaveis
 
-Configure no Vercel e no `.env` local quando for testar fora do simulador:
+Configure no Vercel e no `.env` local quando for testar fora do teste interno:
 
 ```env
 UMBRELLA_API_BASE_URL=https://api.umbrellapag.com.br
@@ -34,11 +34,14 @@ NEXT_PUBLIC_APP_URL=https://pay-flow.shop
 
 1. Entre em `/integracoes`.
 2. No bloco `UmbrellaPag agora`, copie o webhook oficial.
-3. Clique em `Simular pendente`.
-4. Abra `/pagamentos` e confira o pagamento criado.
-5. Abra `/recuperacoes` e confira se a tentativa foi agendada quando houver fluxo ativo.
-6. Clique em `Simular pago` para validar cancelamento/conversao das recuperacoes relacionadas.
-7. Quando tiver `UMBRELLA_API_KEY`, clique em `Testar credenciais`.
+3. Preencha nome, telefone e email reais do lead.
+4. Clique em `Testar pendente`.
+5. Abra `/pagamentos` e confira o pagamento criado.
+6. Abra `/recuperacoes` e confira se a tentativa foi agendada quando houver fluxo ativo.
+7. Clique em `Testar pago` para validar cancelamento/conversao das recuperacoes relacionadas.
+8. Quando tiver `UMBRELLA_API_KEY`, clique em `Testar credenciais`.
+
+Importante: a UmbrellaPag so gera dados de pagamento com informacoes reais do lead. O PayFlow nao deve chamar a API real usando nome, telefone, email ou documento ficticios. O teste interno do painel exige dados preenchidos pelo usuario para manter esse fluxo alinhado com a regra da Umbrella.
 
 ## Payload aceito
 
@@ -55,9 +58,9 @@ Exemplo simples:
   "payment_method": "pix",
   "checkout_url": "https://checkout.local/pay",
   "customer": {
-    "name": "Cliente Pix",
-    "phone": "5511888888888",
-    "email": "pix@example.com"
+      "name": "<nome-real-do-lead>",
+      "phone": "<telefone-real-com-ddi>",
+      "email": "<email-real-do-lead>"
   },
   "offer": {
     "id": "offer-02",
@@ -81,9 +84,9 @@ Exemplo estilo API:
     },
     "metadata": "{\"linkId\":\"offer-02\",\"orderId\":\"order-123\"}",
     "customer": {
-      "name": "Cliente API",
-      "phone": "5511999999999",
-      "email": "api@example.com",
+      "name": "<nome-real-do-lead>",
+      "phone": "<telefone-real-com-ddi>",
+      "email": "<email-real-do-lead>",
       "document": {
         "number": "12345678900",
         "type": "cpf"

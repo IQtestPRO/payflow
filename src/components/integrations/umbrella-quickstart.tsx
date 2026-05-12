@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Copy, CreditCard, KeyRound, Play, RefreshCcw, ShieldCheck, Webhook } from "lucide-react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,13 @@ type UmbrellaStatus = {
 type ActionNotice = {
   tone: "success" | "error" | "info";
   text: string;
+};
+
+type LeadForm = {
+  name: string;
+  phone: string;
+  email: string;
+  document: string;
 };
 
 type SimulateResponse = {
@@ -68,6 +76,7 @@ export function UmbrellaQuickstart() {
   const [notice, setNotice] = useState<ActionNotice | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [lastSimulation, setLastSimulation] = useState<SimulateResponse | null>(null);
+  const [lead, setLead] = useState<LeadForm>({ name: "", phone: "", email: "", document: "" });
 
   useEffect(() => {
     fetch("/api/integrations/umbrella/status")
@@ -80,6 +89,8 @@ export function UmbrellaQuickstart() {
     const checks = [status?.hasApiBaseUrl, status?.hasApiKey, Boolean(status?.webhookUrl), status?.webhookSecretConfigured];
     return checks.filter(Boolean).length;
   }, [status]);
+
+  const leadReady = lead.name.trim().length >= 2 && lead.phone.replace(/\D/g, "").length >= 10 && lead.email.includes("@");
 
   async function copy(value?: string) {
     if (!value) return;
@@ -104,13 +115,24 @@ export function UmbrellaQuickstart() {
   }
 
   async function simulate(type: "pending" | "paid" | "failed" | "expired") {
+    if (!leadReady) {
+      setNotice({ tone: "error", text: "Preencha nome, telefone e email reais do lead antes de testar a Umbrella." });
+      return;
+    }
+
     setLoadingAction(type);
     setNotice(null);
     const previousPaymentId = lastSimulation?.result?.payment?.providerPaymentId;
+    const leadPayload = {
+      name: lead.name.trim(),
+      phone: lead.phone.replace(/\D/g, ""),
+      email: lead.email.trim(),
+      document: lead.document.replace(/\D/g, "")
+    };
     const response = await fetch("/api/integrations/umbrella/simulate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(type === "pending" || !previousPaymentId ? { type } : { type, externalId: previousPaymentId })
+      body: JSON.stringify(type === "pending" || !previousPaymentId ? { type, lead: leadPayload } : { type, lead: leadPayload, externalId: previousPaymentId })
     });
     const json = (await response.json()) as SimulateResponse;
     setLastSimulation(json);
@@ -137,7 +159,7 @@ APP_URL=https://pay-flow.shop`;
             </div>
             <h2 className="mt-4 max-w-3xl text-2xl font-bold md:text-3xl">Pagamentos alimentando recuperacao</h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-white/75">
-              Este bloco valida credenciais, mostra o callback oficial e simula eventos reais para testar pagamentos pendentes, aprovados e a fila de recuperacao.
+              Este bloco valida credenciais, mostra o callback oficial e testa eventos usando dados reais do lead, do mesmo jeito que a Umbrella exige para gerar pagamento.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <button className="btn min-h-10 border border-white/10 bg-white text-brand-navy hover:bg-white/90" type="button" onClick={() => copy(status?.webhookUrl)}>
@@ -176,7 +198,7 @@ APP_URL=https://pay-flow.shop`;
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-primary">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-              Pronto para simular
+              Lead real obrigatorio
             </span>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -221,23 +243,43 @@ APP_URL=https://pay-flow.shop`;
         <section className="surface p-5">
           <div className="flex items-center gap-2">
             <Play className="h-5 w-5 text-primary" aria-hidden="true" />
-            <h3 className="text-lg font-bold">Simulador de eventos</h3>
+            <h3 className="text-lg font-bold">Teste com lead real</h3>
           </div>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Use antes da chave real para validar pagamentos, dashboard e recuperacoes no banco atual.
+            A Umbrella nao gera pagamento com dados ficticios. Preencha um lead real para validar pagamentos, dashboard e recuperacoes no banco atual.
           </p>
+          <div className="mt-4 grid gap-3">
+            <label className="grid gap-2 text-sm font-semibold">
+              Nome real do lead
+              <input className="field" value={lead.name} onChange={(event) => setLeadField(setLead, "name", event.target.value)} placeholder="Nome completo" autoComplete="name" />
+            </label>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="grid gap-2 text-sm font-semibold">
+                Telefone com DDI
+                <input className="field" value={lead.phone} onChange={(event) => setLeadField(setLead, "phone", event.target.value)} placeholder="5511999999999" inputMode="tel" autoComplete="tel" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold">
+                Email real
+                <input className="field" value={lead.email} onChange={(event) => setLeadField(setLead, "email", event.target.value)} placeholder="lead@email.com" type="email" autoComplete="email" />
+              </label>
+            </div>
+            <label className="grid gap-2 text-sm font-semibold">
+              CPF/CNPJ opcional
+              <input className="field" value={lead.document} onChange={(event) => setLeadField(setLead, "document", event.target.value)} placeholder="Somente numeros" inputMode="numeric" />
+            </label>
+          </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <ActionButton loading={loadingAction === "pending"} onClick={() => simulate("pending")}>
-              Simular pendente
+            <ActionButton loading={loadingAction === "pending"} disabled={!leadReady} onClick={() => simulate("pending")}>
+              Testar pendente
             </ActionButton>
-            <ActionButton loading={loadingAction === "paid"} onClick={() => simulate("paid")}>
-              Simular pago
+            <ActionButton loading={loadingAction === "paid"} disabled={!leadReady} onClick={() => simulate("paid")}>
+              Testar pago
             </ActionButton>
-            <ActionButton loading={loadingAction === "failed"} onClick={() => simulate("failed")}>
-              Simular recusado
+            <ActionButton loading={loadingAction === "failed"} disabled={!leadReady} onClick={() => simulate("failed")}>
+              Testar recusado
             </ActionButton>
-            <ActionButton loading={loadingAction === "expired"} onClick={() => simulate("expired")}>
-              Simular expirado
+            <ActionButton loading={loadingAction === "expired"} disabled={!leadReady} onClick={() => simulate("expired")}>
+              Testar expirado
             </ActionButton>
           </div>
           {lastSimulation?.result?.payment ? (
@@ -291,13 +333,17 @@ function CopyField({ label, value, onCopy }: { label: string; value: string; onC
   );
 }
 
-function ActionButton({ children, loading, onClick }: { children: React.ReactNode; loading: boolean; onClick: () => void }) {
+function ActionButton({ children, loading, disabled, onClick }: { children: ReactNode; loading: boolean; disabled?: boolean; onClick: () => void }) {
   return (
-    <button type="button" className="btn-secondary w-full" disabled={loading} onClick={onClick}>
+    <button type="button" className="btn-secondary w-full" disabled={loading || disabled} onClick={onClick}>
       {loading ? <RefreshCcw className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
       {loading ? "Aguarde" : children}
     </button>
   );
+}
+
+function setLeadField(setLead: Dispatch<SetStateAction<LeadForm>>, key: keyof LeadForm, value: string) {
+  setLead((current) => ({ ...current, [key]: value }));
 }
 
 function NoticeCard({ notice }: { notice: ActionNotice }) {

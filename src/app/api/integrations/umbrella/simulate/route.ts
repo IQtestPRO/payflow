@@ -4,10 +4,28 @@ import { appUrl } from "@/lib/env";
 import { processUmbrellaWebhookPayload } from "@/server/services/webhooks";
 import { requireApiUser } from "@/server/services/api-auth";
 
+const leadSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  phone: z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/\D/g, ""))
+    .refine((value) => value.length >= 10 && value.length <= 15, "Telefone do lead invalido"),
+  email: z.string().trim().email().max(160),
+  document: z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/\D/g, ""))
+    .optional()
+});
+
 const schema = z.object({
   type: z.enum(["pending", "paid", "failed", "expired"]).default("pending"),
-  externalId: z.string().min(3).max(120).optional()
+  externalId: z.string().min(3).max(120).optional(),
+  lead: leadSchema
 });
+
+type LeadInput = z.infer<typeof leadSchema>;
 
 const statusByType = {
   pending: "pix_generated",
@@ -21,9 +39,11 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response;
 
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Simulacao Umbrella invalida" }, { status: 422 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Informe nome, telefone e email reais do lead para testar a Umbrella." }, { status: 422 });
+  }
 
-  const payload = buildSimulationPayload(parsed.data.type, parsed.data.externalId);
+  const payload = buildSimulationPayload(parsed.data.type, parsed.data.lead, parsed.data.externalId);
 
   try {
     const result = await processUmbrellaWebhookPayload(payload, auth.user.workspaceId);
@@ -36,9 +56,10 @@ export async function POST(request: Request) {
   }
 }
 
-function buildSimulationPayload(type: z.infer<typeof schema>["type"], externalId?: string) {
+function buildSimulationPayload(type: z.infer<typeof schema>["type"], lead: LeadInput, externalId?: string) {
   const id = externalId || `umb-sim-${type}-${Date.now()}`;
   const now = new Date().toISOString();
+  const document = lead.document ? { number: lead.document, type: lead.document.length > 11 ? "cnpj" : "cpf" } : undefined;
 
   return {
     data: {
@@ -58,13 +79,10 @@ function buildSimulationPayload(type: z.infer<typeof schema>["type"], externalId
         source: "payflow-simulation"
       }),
       customer: {
-        name: type === "paid" ? "Cliente Pago Umbrella" : "Cliente Pendente Umbrella",
-        phone: "5511999999999",
-        email: `${type}-${Date.now()}@payflow.local`,
-        document: {
-          number: "12345678900",
-          type: "cpf"
-        }
+        name: lead.name,
+        phone: lead.phone,
+        email: lead.email,
+        document
       },
       items: [
         {
