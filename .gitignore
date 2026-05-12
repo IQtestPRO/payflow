@@ -10,3 +10,5 @@ coverage
 payflow-dev.db
 tsconfig.tsbuildinfo
 .logs
+
+.vercel
