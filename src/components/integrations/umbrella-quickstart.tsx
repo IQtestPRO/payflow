@@ -249,7 +249,7 @@ export function UmbrellaQuickstart() {
   const envBlock = `UMBRELLA_API_BASE_URL=${status?.apiBaseUrl || "https://api.umbrellapag.com.br"}
 UMBRELLA_API_KEY=<sua-chave-umbrella>
 UMBRELLA_USER_AGENT=UMBRELLAB2B/1.0
-UMBRELLA_WEBHOOK_SECRET=<secret-opcional>
+UMBRELLA_WEBHOOK_SECRET=${status?.webhookSecretConfigured ? "<configurado-na-vercel>" : "<secret-obrigatorio-em-producao>"}
 APP_URL=https://pay-flow.shop`;
 
   return (
@@ -473,10 +473,17 @@ APP_URL=https://pay-flow.shop`;
             <h3 className="text-lg font-bold">Variaveis de producao</h3>
           </div>
           <pre className="mt-4 overflow-x-auto rounded-md border border-border bg-slate-950 p-4 text-xs leading-6 text-brand-green">{envBlock}</pre>
-          <div className="mt-3 flex items-start gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <p>Sem UMBRELLA_WEBHOOK_SECRET o PayFlow aceita webhook sem assinatura. Funciona para teste, mas o secret e recomendado em producao.</p>
-          </div>
+          {status?.webhookSecretConfigured ? (
+            <div className="mt-3 flex items-start gap-2 rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>UMBRELLA_WEBHOOK_SECRET configurado. O PayFlow exige assinatura HMAC no header x-umbrella-signature ou x-signature para webhooks reais da Umbrella.</p>
+            </div>
+          ) : (
+            <div className="mt-3 flex items-start gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>Sem UMBRELLA_WEBHOOK_SECRET o PayFlow aceita webhook sem assinatura. Funciona para teste, mas o secret e recomendado em producao.</p>
+            </div>
+          )}
         </section>
       </div>
     </div>
