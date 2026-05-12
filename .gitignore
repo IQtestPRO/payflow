@@ -12,3 +12,4 @@ tsconfig.tsbuildinfo
 .logs
 
 .vercel
+.env*.local
