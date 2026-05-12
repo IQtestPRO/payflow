@@ -45,23 +45,54 @@ export const umbrellaWebhookSchema = z
   .object({
     id: z.string().optional(),
     transaction_id: z.string().optional(),
+    transactionId: z.string().optional(),
     payment_id: z.string().optional(),
-    status: z.string(),
-    amount: z.coerce.number().nonnegative(),
+    paymentId: z.string().optional(),
+    externalRef: z.string().optional().nullable(),
+    status: z.string().optional(),
+    amount: z.coerce.number().nonnegative().optional(),
+    totalAmount: z.coerce.number().nonnegative().optional(),
+    amount_total: z.coerce.number().nonnegative().optional(),
+    value_cents: z.coerce.number().nonnegative().optional(),
     currency: z.string().default("BRL"),
     payment_method: z.string().optional(),
+    paymentMethod: z.string().optional(),
     checkout_url: z.string().optional(),
+    checkoutUrl: z.string().optional(),
+    secureUrl: z.string().optional().nullable(),
+    postbackUrl: z.string().optional().nullable(),
     pix_code: z.string().optional(),
+    pixCode: z.string().optional(),
     boleto_url: z.string().optional(),
+    boletoUrl: z.string().optional(),
     expires_at: z.string().optional(),
+    expiresAt: z.string().optional(),
     paid_at: z.string().optional(),
+    paidAt: z.string().optional().nullable(),
+    createdAt: z.string().optional(),
+    metadata: z.unknown().optional(),
+    pix: z.unknown().optional(),
+    boleto: z.unknown().optional(),
+    items: z.array(z.unknown()).optional(),
+    data: z.unknown().optional(),
+    payload: z.unknown().optional(),
+    transaction: z.unknown().optional(),
     customer: z
       .object({
         name: z.string().optional(),
         phone: z.string().optional(),
         email: z.string().optional(),
-        document: z.string().optional()
+        document: z
+          .union([
+            z.string(),
+            z.object({
+              number: z.string().optional(),
+              type: z.string().optional()
+            }).passthrough()
+          ])
+          .optional()
       })
+      .passthrough()
       .optional(),
     offer: z
       .object({

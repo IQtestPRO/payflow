@@ -108,6 +108,8 @@ curl -X POST http://localhost:3000/api/webhooks/umbrella \
   -d "{\"id\":\"pay-local-1\",\"status\":\"paid\",\"amount\":297,\"currency\":\"BRL\",\"paid_at\":\"2026-05-08T12:00:00.000Z\",\"customer\":{\"name\":\"Cliente Pix\",\"phone\":\"5511888888888\"},\"offer\":{\"id\":\"offer-02\",\"name\":\"Kit Funil WhatsApp\"}}"
 ```
 
+O painel `/integracoes` tambem tem um bloco da UmbrellaPag com webhook copiavel, teste de credenciais e simulador de eventos pendente/pago/recusado/expirado.
+
 Utmify:
 
 ```bash
@@ -149,7 +151,15 @@ Para Meta Cloud API, configure:
 - `WHATSAPP_VERIFY_TOKEN`
 - `WHATSAPP_WEBHOOK_SECRET`
 
-Umbrella, Utmify e Meta Ads ja tem adapters iniciais e TODOs nos pontos de integracao real.
+UmbrellaPag ja normaliza payloads simples e payloads aninhados da API, cria/atualiza pagamentos e aciona recuperacoes. Configure:
+
+- `UMBRELLA_API_BASE_URL`
+- `UMBRELLA_API_KEY`
+- `UMBRELLA_WEBHOOK_SECRET`
+
+Veja o guia em `docs/umbrella-integration.md`.
+
+Utmify e Meta Ads ja tem adapters iniciais e TODOs nos pontos de integracao real.
 
 Com BM ainda nao verificada, comece por `docs/evolution-local-quickstart.md`. O guia antigo da Cloud API segue em `docs/whatsapp-cloud-api-quickstart.md` para migracao futura.
 

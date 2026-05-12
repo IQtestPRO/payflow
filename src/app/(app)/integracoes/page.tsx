@@ -1,5 +1,6 @@
 import { PayFlowMark } from "@/components/brand/payflow-logo";
 import { IntegrationCard } from "@/components/integrations/integration-card";
+import { UmbrellaQuickstart } from "@/components/integrations/umbrella-quickstart";
 import { WhatsAppQuickstart } from "@/components/integrations/whatsapp-quickstart";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listIntegrations } from "@/server/repositories/payflow-repository";
@@ -42,6 +43,8 @@ export default async function IntegrationsPage() {
       </section>
 
       <WhatsAppQuickstart />
+
+      <UmbrellaQuickstart />
 
       <section>
         <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
