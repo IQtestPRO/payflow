@@ -1,0 +1,484 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  ATTENDANT
+  VIEWER
+}
+
+enum IntegrationProvider {
+  WHATSAPP
+  META_ADS
+  UMBRELLA
+  UTMIFY
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  MOCK
+}
+
+enum OfferStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ProductStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum CustomerStatus {
+  NEW
+  IN_SERVICE
+  PAYMENT_PENDING
+  BUYER
+  RECOVERED
+  LOST
+}
+
+enum ConversationChannel {
+  WHATSAPP
+}
+
+enum ConversationStatus {
+  OPEN
+  UNANSWERED
+  WAITING_CUSTOMER
+  RESOLVED
+  PAYMENT_PENDING
+  RECOVERY
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  INTERNAL
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  RECEIVED
+}
+
+enum PaymentProviderName {
+  UMBRELLA
+  MOCK
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  WAITING_PAYMENT
+  PIX_GENERATED
+  BOLETO_GENERATED
+  FAILED
+  EXPIRED
+  CANCELLED
+  PAID
+  REFUNDED
+  CHARGEBACK
+}
+
+enum RecoveryFlowStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RecoveryChannel {
+  WHATSAPP
+}
+
+enum RecoveryAttemptStatus {
+  SCHEDULED
+  SENT
+  FAILED
+  CANCELLED
+  CONVERTED
+}
+
+enum CampaignProvider {
+  META_ADS
+  MOCK
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+enum WebhookProvider {
+  WHATSAPP
+  UMBRELLA
+  UTMIFY
+  META_ADS
+}
+
+model Workspace {
+  id                  String               @id @default(cuid())
+  name                String
+  slug                String               @unique
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  users               User[]
+  integrationAccounts IntegrationAccount[]
+  offers              Offer[]
+  products            Product[]
+  customers           Customer[]
+  conversations       Conversation[]
+  messages            Message[]
+  payments            Payment[]
+  recoveryFlows       RecoveryFlow[]
+  recoveryAttempts    RecoveryAttempt[]
+  campaigns           Campaign[]
+  adSets              AdSet[]
+  ads                 Ad[]
+  trackingEvents      TrackingEvent[]
+  webhookEvents       WebhookEvent[]
+  auditLogs           AuditLog[]
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String?
+  authProvider String?
+  role         UserRole     @default(ATTENDANT)
+  workspaceId  String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assigned     Conversation[] @relation("ConversationAssignee")
+  auditLogs    AuditLog[]
+}
+
+model IntegrationAccount {
+  id              String              @id @default(cuid())
+  workspaceId     String
+  provider        IntegrationProvider
+  status          IntegrationStatus   @default(MOCK)
+  configEncrypted String?
+  configJson      Json?
+  lastSyncAt      DateTime?
+  errorMessage    String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider])
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?
+  price       Decimal       @db.Decimal(12, 2)
+  category    String?
+  status      ProductStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  offers      Offer[]
+}
+
+model Offer {
+  id                  String       @id @default(cuid())
+  workspaceId          String
+  productId            String?
+  name                 String
+  slug                 String
+  price                Decimal      @db.Decimal(12, 2)
+  salesPageUrl         String?
+  checkoutUrl          String?
+  status               OfferStatus  @default(ACTIVE)
+  tags                 String[]      @default([])
+  trafficSourceDefault String?
+  defaultUtmSource     String?
+  defaultUtmMedium     String?
+  defaultUtmCampaign   String?
+  defaultUtmContent    String?
+  defaultUtmTerm       String?
+  visits               Int          @default(0)
+  checkoutStarts       Int          @default(0)
+  paymentsGenerated    Int          @default(0)
+  paymentsApproved     Int          @default(0)
+  abandonments         Int          @default(0)
+  recoveries           Int          @default(0)
+  allowExpiredRecovery Boolean      @default(true)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  workspace            Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  product              Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  payments             Payment[]
+  recoveryFlows        RecoveryFlow[]
+  trackingEvents       TrackingEvent[]
+
+  @@unique([workspaceId, slug])
+}
+
+model Customer {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  name          String
+  phone         String?
+  email         String?
+  document      String?
+  tags          String[]        @default([])
+  source        String?
+  lastCampaign  String?
+  lastOffer     String?
+  totalPurchases Int            @default(0)
+  status        CustomerStatus  @default(NEW)
+  doNotContact  Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  messages      Message[]
+  payments      Payment[]
+  recoveryAttempts RecoveryAttempt[]
+  trackingEvents TrackingEvent[]
+
+  @@index([workspaceId, phone])
+  @@index([workspaceId, email])
+}
+
+model Conversation {
+  id            String             @id @default(cuid())
+  workspaceId   String
+  customerId    String
+  assignedToId  String?
+  channel       ConversationChannel @default(WHATSAPP)
+  status        ConversationStatus @default(OPEN)
+  tags          String[]           @default([])
+  linkedOfferId String?
+  linkedPaymentId String?
+  lastMessageAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer      Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignedTo    User?              @relation("ConversationAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages      Message[]
+  recoveryAttempts RecoveryAttempt[]
+}
+
+model Message {
+  id                String           @id @default(cuid())
+  workspaceId       String
+  conversationId    String
+  customerId        String
+  direction         MessageDirection
+  channel           ConversationChannel @default(WHATSAPP)
+  body              String
+  providerMessageId String?
+  status            MessageStatus    @default(QUEUED)
+  metadataJson      Json?
+  createdAt         DateTime         @default(now())
+  workspace         Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  customer          Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id                String              @id @default(cuid())
+  workspaceId       String
+  customerId        String?
+  offerId           String?
+  provider          PaymentProviderName @default(UMBRELLA)
+  providerPaymentId String
+  status            PaymentStatus       @default(CREATED)
+  amount            Decimal             @db.Decimal(12, 2)
+  currency          String              @default("BRL")
+  paymentMethod     String?
+  checkoutUrl       String?
+  pixCode           String?
+  boletoUrl         String?
+  rawPayloadJson    Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  paidAt            DateTime?
+  expiresAt         DateTime?
+  workspace         Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer          Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  offer             Offer?              @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  recoveryAttempts  RecoveryAttempt[]
+  trackingEvents    TrackingEvent[]
+
+  @@unique([workspaceId, provider, providerPaymentId])
+}
+
+model RecoveryFlow {
+  id                  String             @id @default(cuid())
+  workspaceId          String
+  offerId              String?
+  name                 String
+  status               RecoveryFlowStatus @default(ACTIVE)
+  channels             RecoveryChannel[]  @default([WHATSAPP])
+  firstDelayMinutes    Int                @default(15)
+  secondDelayMinutes   Int                @default(180)
+  thirdDelayMinutes    Int                @default(1440)
+  maxAttempts          Int                @default(3)
+  allowedStartHour     Int                @default(9)
+  allowedEndHour       Int                @default(20)
+  template1            String
+  template2            String
+  template3            String
+  stopOnPaid           Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  offer                Offer?             @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  attempts             RecoveryAttempt[]
+}
+
+model RecoveryAttempt {
+  id             String                @id @default(cuid())
+  workspaceId    String
+  recoveryFlowId String?
+  paymentId      String
+  customerId     String?
+  conversationId String?
+  status         RecoveryAttemptStatus @default(SCHEDULED)
+  channel        RecoveryChannel       @default(WHATSAPP)
+  attemptNumber  Int
+  templateUsed   String?
+  scheduledAt    DateTime
+  sentAt         DateTime?
+  convertedAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  workspace      Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  recoveryFlow   RecoveryFlow?         @relation(fields: [recoveryFlowId], references: [id], onDelete: SetNull)
+  payment        Payment               @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  customer       Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  conversation   Conversation?         @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+}
+
+model Campaign {
+  id                 String           @id @default(cuid())
+  workspaceId        String
+  provider           CampaignProvider @default(META_ADS)
+  providerCampaignId String?
+  name               String
+  status             CampaignStatus   @default(ACTIVE)
+  objective          String?
+  spend              Decimal          @default(0) @db.Decimal(12, 2)
+  impressions        Int              @default(0)
+  clicks             Int              @default(0)
+  ctr                Decimal          @default(0) @db.Decimal(8, 4)
+  cpc                Decimal          @default(0) @db.Decimal(12, 2)
+  cpm                Decimal          @default(0) @db.Decimal(12, 2)
+  revenue            Decimal          @default(0) @db.Decimal(12, 2)
+  roas               Decimal          @default(0) @db.Decimal(10, 2)
+  cpa                Decimal          @default(0) @db.Decimal(12, 2)
+  dateStart          DateTime?
+  dateEnd            DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  adSets             AdSet[]
+  ads                Ad[]
+}
+
+model AdSet {
+  id              String         @id @default(cuid())
+  workspaceId     String
+  campaignId      String
+  providerAdSetId String?
+  name            String
+  status          CampaignStatus @default(ACTIVE)
+  metricsJson     Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  workspace       Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign        Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ads             Ad[]
+}
+
+model Ad {
+  id           String         @id @default(cuid())
+  workspaceId  String
+  campaignId   String
+  adSetId      String?
+  providerAdId String?
+  name         String
+  status       CampaignStatus @default(ACTIVE)
+  metricsJson  Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign     Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  adSet        AdSet?         @relation(fields: [adSetId], references: [id], onDelete: SetNull)
+}
+
+model TrackingEvent {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  customerId     String?
+  paymentId      String?
+  offerId        String?
+  source         String?
+  medium         String?
+  campaign       String?
+  content        String?
+  term           String?
+  fbclid         String?
+  clickId        String?
+  eventType      String
+  rawPayloadJson Json?
+  createdAt      DateTime  @default(now())
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  payment        Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  offer          Offer?    @relation(fields: [offerId], references: [id], onDelete: SetNull)
+}
+
+model WebhookEvent {
+  id             String          @id @default(cuid())
+  workspaceId    String
+  provider       WebhookProvider
+  eventType      String
+  externalId     String?
+  rawPayloadJson Json
+  processedAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime        @default(now())
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider, eventType, externalId])
+}
+
+model AuditLog {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  userId       String?
+  action       String
+  entity       String
+  entityId     String?
+  metadataJson Json?
+  createdAt    DateTime  @default(now())
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

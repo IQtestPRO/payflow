@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: payflow-postgres
+    environment:
+      POSTGRES_DB: payflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - payflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  evolution-postgres:
+    image: postgres:16-alpine
+    container_name: payflow-evolution-postgres
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+    volumes:
+      - payflow-evolution-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  evolution-redis:
+    image: redis:7-alpine
+    container_name: payflow-evolution-redis
+    volumes:
+      - payflow-evolution-redis-data:/data
+
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: payflow-evolution-api
+    restart: unless-stopped
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_URL: ${EVOLUTION_API_BASE_URL:-http://localhost:8080}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-payflow-evolution-local-key}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@evolution-postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: payflow_evolution
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_LABELS: "true"
+      DATABASE_SAVE_DATA_HISTORIC: "true"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://evolution-redis:6379/0
+      CACHE_REDIS_PREFIX_KEY: payflow_evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      LOG_LEVEL: ERROR,WARN,INFO
+    volumes:
+      - payflow-evolution-instances:/evolution/instances
+
+volumes:
+  payflow-postgres-data:
+  payflow-evolution-postgres-data:
+  payflow-evolution-redis-data:
+  payflow-evolution-instances:

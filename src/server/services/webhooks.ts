@@ -1,0 +1,128 @@
+import { DEFAULT_WORKSPACE_ID, createOrUpdateCustomer, recordTrackingEvent, recordWebhookEvent, registerInboundWhatsAppMessage, upsertPayment } from "@/server/repositories/payflow-repository";
+import { cancelRecoveryBecausePaid, scheduleRecoveryForPayment } from "@/server/services/recovery";
+import { getWhatsAppProvider } from "@/providers/whatsapp";
+import { UmbrellaProvider } from "@/providers/payments/umbrella";
+import { UtmifyProvider } from "@/providers/tracking/utmify";
+
+export async function processWhatsAppWebhookPayload(payload: unknown, workspaceId = DEFAULT_WORKSPACE_ID) {
+  const provider = getWhatsAppProvider();
+  const messages = provider.parseWebhook(payload);
+  const results = [];
+
+  for (const message of messages) {
+    const event = await recordWebhookEvent({
+      workspaceId,
+      provider: "WHATSAPP",
+      eventType: message.eventType,
+      externalId: message.providerMessageId,
+      rawPayloadJson: message.raw
+    });
+
+    if (event.duplicated) {
+      results.push({ duplicated: true, providerMessageId: message.providerMessageId });
+      continue;
+    }
+
+    results.push(await registerInboundWhatsAppMessage({ ...message, workspaceId, metadataJson: message.raw }));
+  }
+
+  return { received: messages.length, results };
+}
+
+export async function processUmbrellaWebhookPayload(payload: unknown, workspaceId = DEFAULT_WORKSPACE_ID) {
+  const provider = new UmbrellaProvider();
+  const normalized = provider.normalizeWebhook(payload);
+
+  const webhook = await recordWebhookEvent({
+    workspaceId,
+    provider: "UMBRELLA",
+    eventType: normalized.eventType,
+    externalId: normalized.externalId,
+    rawPayloadJson: normalized.raw
+  });
+
+  if (webhook.duplicated) {
+    return { duplicated: true };
+  }
+
+  const customer = await createOrUpdateCustomer(
+    {
+      name: normalized.customer.name,
+      phone: normalized.customer.phone,
+      email: normalized.customer.email,
+      document: normalized.customer.document,
+      status: normalized.payment.status === "PAID" ? "BUYER" : "PAYMENT_PENDING",
+      source: "Umbrella"
+    },
+    workspaceId
+  );
+
+  const payment = await upsertPayment(
+    {
+      ...normalized.payment,
+      workspaceId,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone
+    },
+    workspaceId
+  );
+
+  if (payment.status === "PAID") {
+    await cancelRecoveryBecausePaid(payment);
+    return { payment, recovery: "converted" };
+  }
+
+  const recovery = await scheduleRecoveryForPayment(payment, workspaceId);
+  return { payment, recovery };
+}
+
+export async function processUtmifyWebhookPayload(payload: unknown, workspaceId = DEFAULT_WORKSPACE_ID) {
+  const provider = new UtmifyProvider();
+  const normalized = provider.normalizeWebhook(payload);
+
+  const webhook = await recordWebhookEvent({
+    workspaceId,
+    provider: "UTMIFY",
+    eventType: normalized.eventType,
+    externalId: normalized.externalId,
+    rawPayloadJson: normalized.raw
+  });
+
+  if (webhook.duplicated) {
+    return { duplicated: true };
+  }
+
+  let customerId: string | null = null;
+  if (normalized.customerPhone || normalized.customerEmail) {
+    const customer = await createOrUpdateCustomer(
+      {
+        phone: normalized.customerPhone,
+        email: normalized.customerEmail,
+        source: normalized.source,
+        lastCampaign: normalized.campaign,
+        status: "NEW"
+      },
+      workspaceId
+    );
+    customerId = customer.id;
+  }
+
+  await recordTrackingEvent({
+    workspaceId,
+    customerId,
+    paymentId: normalized.paymentId,
+    offerId: normalized.offerId,
+    source: normalized.source,
+    medium: normalized.medium,
+    campaign: normalized.campaign,
+    content: normalized.content,
+    term: normalized.term,
+    fbclid: normalized.fbclid,
+    clickId: normalized.clickId,
+    eventType: normalized.eventType,
+    rawPayloadJson: normalized.raw
+  });
+
+  return { ok: true };
+}
