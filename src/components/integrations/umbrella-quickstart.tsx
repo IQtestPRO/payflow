@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Copy, CreditCard, KeyRound, Play, RefreshCcw, ShieldCheck, Webhook } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, CreditCard, KeyRound, MapPin, Play, RefreshCcw, ShieldCheck, Webhook } from "lucide-react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { IntegrationLogo, integrationBrands } from "@/components/integrations/integration-brand";
@@ -75,6 +75,16 @@ type CreatePaymentResponse = SimulateResponse & {
     qrCode?: string | null;
     boletoUrl?: string | null;
   };
+};
+
+type ViaCepResponse = {
+  erro?: boolean;
+  cep?: string;
+  logradouro?: string;
+  complemento?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
 };
 
 const steps = [
@@ -172,6 +182,42 @@ export function UmbrellaQuickstart() {
       tone: response.ok && json.ok ? "success" : "error",
       text: json.status ?? json.error ?? "Teste concluido."
     });
+  }
+
+  async function lookupZipCode() {
+    const zipCode = lead.zipCode.replace(/\D/g, "");
+    if (zipCode.length !== 8) {
+      setNotice({ tone: "error", text: "Informe um CEP valido com 8 numeros para buscar o endereco." });
+      return;
+    }
+
+    setLoadingAction("cep");
+    setNotice(null);
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${zipCode}/json/`);
+      const json = (await response.json()) as ViaCepResponse;
+
+      if (!response.ok || json.erro) {
+        setNotice({ tone: "error", text: "CEP nao encontrado. Confira o numero e tente novamente." });
+        return;
+      }
+
+      setLead((current) => ({
+        ...current,
+        zipCode,
+        street: json.logradouro || current.street,
+        neighborhood: json.bairro || current.neighborhood,
+        city: json.localidade || current.city,
+        state: json.uf || current.state,
+        complement: current.complement || json.complemento || ""
+      }));
+      setNotice({ tone: "success", text: `Endereco preenchido pelo CEP ${json.cep ?? zipCode}. Confira numero e complemento antes de gerar o pagamento.` });
+    } catch {
+      setNotice({ tone: "error", text: "Nao foi possivel consultar o CEP agora. Preencha o endereco manualmente." });
+    } finally {
+      setLoadingAction(null);
+    }
   }
 
   async function simulate(type: "pending" | "paid" | "failed" | "expired") {
@@ -397,10 +443,16 @@ APP_URL=https://pay-flow.shop`;
               CPF/CNPJ real
               <input className="field" value={lead.document} onChange={(event) => setLeadField(setLead, "document", event.target.value)} placeholder="Somente numeros" inputMode="numeric" />
             </label>
-            <div className="grid gap-3 md:grid-cols-[120px_1fr_110px]">
+            <div className="grid gap-3 md:grid-cols-[minmax(180px,220px)_1fr_110px]">
               <label className="grid gap-2 text-sm font-semibold">
                 CEP
-                <input className="field" value={lead.zipCode} onChange={(event) => setLeadField(setLead, "zipCode", event.target.value)} placeholder="01000000" inputMode="numeric" />
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input className="field" value={lead.zipCode} onChange={(event) => setLeadField(setLead, "zipCode", event.target.value)} placeholder="01000000" inputMode="numeric" />
+                  <button className="btn-secondary min-h-11 px-3" type="button" onClick={lookupZipCode} disabled={loadingAction === "cep"}>
+                    {loadingAction === "cep" ? <RefreshCcw className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
+                    <span className="sr-only sm:not-sr-only">{loadingAction === "cep" ? "Buscando" : "Buscar"}</span>
+                  </button>
+                </div>
               </label>
               <label className="grid gap-2 text-sm font-semibold">
                 Rua
