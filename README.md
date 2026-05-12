@@ -108,7 +108,7 @@ curl -X POST http://localhost:3000/api/webhooks/umbrella \
   -d "{\"id\":\"pay-local-1\",\"status\":\"paid\",\"amount\":297,\"currency\":\"BRL\",\"paid_at\":\"2026-05-08T12:00:00.000Z\",\"customer\":{\"name\":\"Cliente Pix\",\"phone\":\"5511888888888\"},\"offer\":{\"id\":\"offer-02\",\"name\":\"Kit Funil WhatsApp\"}}"
 ```
 
-O painel `/integracoes` tambem tem um bloco da UmbrellaPag com webhook copiavel, teste de credenciais e teste interno de eventos pendente/pago/recusado/expirado. Para manter compatibilidade com a regra da UmbrellaPag, o teste exige nome, telefone e email reais do lead.
+O painel `/integracoes` tambem tem um bloco da UmbrellaPag com webhook copiavel, teste de credenciais, geracao de pagamento real via `/api/user/transactions` e teste interno de eventos pendente/pago/recusado/expirado. Para manter compatibilidade com a regra da UmbrellaPag, a geracao real exige nome, telefone, email, CPF/CNPJ e endereco reais do lead.
 
 Utmify:
 
@@ -155,6 +155,7 @@ UmbrellaPag ja normaliza payloads simples e payloads aninhados da API, cria/atua
 
 - `UMBRELLA_API_BASE_URL`
 - `UMBRELLA_API_KEY`
+- `UMBRELLA_USER_AGENT`
 - `UMBRELLA_WEBHOOK_SECRET`
 
 Veja o guia em `docs/umbrella-integration.md`.

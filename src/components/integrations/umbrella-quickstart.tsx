@@ -10,6 +10,7 @@ type UmbrellaStatus = {
   readyForRealApi: boolean;
   hasApiBaseUrl: boolean;
   hasApiKey: boolean;
+  hasUserAgent: boolean;
   webhookSecretConfigured: boolean;
   apiBaseUrl: string;
   webhookUrl: string;
@@ -25,6 +26,19 @@ type LeadForm = {
   phone: string;
   email: string;
   document: string;
+  zipCode: string;
+  street: string;
+  streetNumber: string;
+  neighborhood: string;
+  complement: string;
+  city: string;
+  state: string;
+};
+
+type PaymentForm = {
+  amount: string;
+  itemTitle: string;
+  paymentMethod: "PIX" | "BOLETO";
 };
 
 type SimulateResponse = {
@@ -45,6 +59,20 @@ type SimulateResponse = {
       providerPaymentId: string;
     };
     recovery?: unknown;
+  };
+};
+
+type CreatePaymentResponse = SimulateResponse & {
+  transaction?: {
+    id?: string | null;
+    status?: string | null;
+    paymentMethod?: string | null;
+    secureUrl?: string | null;
+    payUrl?: string | null;
+    webUrl?: string | null;
+    appUrl?: string | null;
+    qrCode?: string | null;
+    boletoUrl?: string | null;
   };
 };
 
@@ -76,7 +104,25 @@ export function UmbrellaQuickstart() {
   const [notice, setNotice] = useState<ActionNotice | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [lastSimulation, setLastSimulation] = useState<SimulateResponse | null>(null);
-  const [lead, setLead] = useState<LeadForm>({ name: "", phone: "", email: "", document: "" });
+  const [realPayment, setRealPayment] = useState<CreatePaymentResponse | null>(null);
+  const [lead, setLead] = useState<LeadForm>({
+    name: "",
+    phone: "",
+    email: "",
+    document: "",
+    zipCode: "",
+    street: "",
+    streetNumber: "",
+    neighborhood: "",
+    complement: "",
+    city: "",
+    state: ""
+  });
+  const [payment, setPayment] = useState<PaymentForm>({
+    amount: "297",
+    itemTitle: "Kit Funil WhatsApp",
+    paymentMethod: "PIX"
+  });
 
   useEffect(() => {
     fetch("/api/integrations/umbrella/status")
@@ -86,11 +132,24 @@ export function UmbrellaQuickstart() {
   }, []);
 
   const completion = useMemo(() => {
-    const checks = [status?.hasApiBaseUrl, status?.hasApiKey, Boolean(status?.webhookUrl), status?.webhookSecretConfigured];
+    const checks = [status?.hasApiBaseUrl, status?.hasApiKey, status?.hasUserAgent, Boolean(status?.webhookUrl), status?.webhookSecretConfigured];
     return checks.filter(Boolean).length;
   }, [status]);
 
-  const leadReady = lead.name.trim().length >= 2 && lead.phone.replace(/\D/g, "").length >= 10 && lead.email.includes("@");
+  const leadReady =
+    lead.name.trim().length >= 2 &&
+    lead.phone.replace(/\D/g, "").length >= 10 &&
+    lead.email.includes("@") &&
+    [11, 14].includes(lead.document.replace(/\D/g, "").length);
+  const addressReady =
+    lead.zipCode.replace(/\D/g, "").length === 8 &&
+    lead.street.trim().length >= 2 &&
+    lead.streetNumber.trim().length >= 1 &&
+    lead.neighborhood.trim().length >= 2 &&
+    lead.city.trim().length >= 2 &&
+    /^[A-Za-z]{2}$/.test(lead.state.trim());
+  const paymentReady = Number(payment.amount) > 0 && payment.itemTitle.trim().length >= 2;
+  const realPaymentReady = Boolean(status?.readyForRealApi) && leadReady && addressReady && paymentReady;
 
   async function copy(value?: string) {
     if (!value) return;
@@ -116,7 +175,7 @@ export function UmbrellaQuickstart() {
 
   async function simulate(type: "pending" | "paid" | "failed" | "expired") {
     if (!leadReady) {
-      setNotice({ tone: "error", text: "Preencha nome, telefone e email reais do lead antes de testar a Umbrella." });
+      setNotice({ tone: "error", text: "Preencha nome, telefone, email e CPF/CNPJ reais do lead antes de testar a Umbrella." });
       return;
     }
 
@@ -143,8 +202,52 @@ export function UmbrellaQuickstart() {
     });
   }
 
+  async function createRealPayment() {
+    if (!realPaymentReady) {
+      setNotice({ tone: "error", text: "Preencha valor, produto, dados reais do lead e endereco antes de gerar pagamento na Umbrella." });
+      return;
+    }
+
+    setLoadingAction("create-payment");
+    setNotice(null);
+    const response = await fetch("/api/integrations/umbrella/create-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: Number(payment.amount),
+        itemTitle: payment.itemTitle.trim(),
+        paymentMethod: payment.paymentMethod,
+        lead: {
+          name: lead.name.trim(),
+          phone: lead.phone.replace(/\D/g, ""),
+          email: lead.email.trim(),
+          document: lead.document.replace(/\D/g, ""),
+          address: {
+            zipCode: lead.zipCode.replace(/\D/g, ""),
+            street: lead.street.trim(),
+            streetNumber: lead.streetNumber.trim(),
+            neighborhood: lead.neighborhood.trim(),
+            complement: lead.complement.trim(),
+            city: lead.city.trim(),
+            state: lead.state.trim().toUpperCase(),
+            country: "BR"
+          }
+        }
+      })
+    });
+    const json = (await response.json()) as CreatePaymentResponse;
+    setRealPayment(json);
+    if (json.result?.payment) setLastSimulation(json);
+    setLoadingAction(null);
+    setNotice({
+      tone: response.ok && json.ok ? "success" : "error",
+      text: response.ok && json.ok ? "Pagamento real criado na Umbrella e registrado no PayFlow." : json.error ?? "Falha ao gerar pagamento Umbrella."
+    });
+  }
+
   const envBlock = `UMBRELLA_API_BASE_URL=${status?.apiBaseUrl || "https://api.umbrellapag.com.br"}
 UMBRELLA_API_KEY=<sua-chave-umbrella>
+UMBRELLA_USER_AGENT=UMBRELLAB2B/1.0
 UMBRELLA_WEBHOOK_SECRET=<secret-opcional>
 APP_URL=https://pay-flow.shop`;
 
@@ -176,12 +279,13 @@ APP_URL=https://pay-flow.shop`;
           <div className="border-t border-white/10 bg-white/5 p-5 md:p-6 lg:border-l lg:border-t-0">
             <p className="text-sm font-semibold text-white/70">Prontidao Umbrella</p>
             <div className="mt-3 flex items-end gap-2">
-              <span className="text-4xl font-bold tabular-nums">{completion}/4</span>
+              <span className="text-4xl font-bold tabular-nums">{completion}/5</span>
               <span className="pb-1 text-sm text-white/60">itens configurados</span>
             </div>
             <div className="mt-5 grid gap-2">
               <ConnectionRow label="URL da API" ready={Boolean(status?.hasApiBaseUrl)} />
               <ConnectionRow label="API key" ready={Boolean(status?.hasApiKey)} />
+              <ConnectionRow label="User-Agent" ready={Boolean(status?.hasUserAgent)} />
               <ConnectionRow label="Webhook publico" ready={Boolean(status?.webhookUrl)} />
               <ConnectionRow label="Secret HMAC" ready={Boolean(status?.webhookSecretConfigured)} optional />
             </div>
@@ -243,12 +347,29 @@ APP_URL=https://pay-flow.shop`;
         <section className="surface p-5">
           <div className="flex items-center gap-2">
             <Play className="h-5 w-5 text-primary" aria-hidden="true" />
-            <h3 className="text-lg font-bold">Teste com lead real</h3>
+            <h3 className="text-lg font-bold">Pagamento com lead real</h3>
           </div>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            A Umbrella nao gera pagamento com dados ficticios. Preencha um lead real para validar pagamentos, dashboard e recuperacoes no banco atual.
+            A Umbrella nao gera pagamento com dados ficticios. Informe lead, documento, endereco, valor e item antes de chamar a API real.
           </p>
           <div className="mt-4 grid gap-3">
+            <div className="grid gap-3 md:grid-cols-[1fr_150px_150px]">
+              <label className="grid gap-2 text-sm font-semibold">
+                Item
+                <input className="field" value={payment.itemTitle} onChange={(event) => setPaymentField(setPayment, "itemTitle", event.target.value)} placeholder="Nome do produto/oferta" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold">
+                Valor
+                <input className="field" value={payment.amount} onChange={(event) => setPaymentField(setPayment, "amount", event.target.value)} placeholder="297" inputMode="decimal" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold">
+                Metodo
+                <select className="field" value={payment.paymentMethod} onChange={(event) => setPaymentField(setPayment, "paymentMethod", event.target.value as PaymentForm["paymentMethod"])}>
+                  <option value="PIX">PIX</option>
+                  <option value="BOLETO">Boleto</option>
+                </select>
+              </label>
+            </div>
             <label className="grid gap-2 text-sm font-semibold">
               Nome real do lead
               <input className="field" value={lead.name} onChange={(event) => setLeadField(setLead, "name", event.target.value)} placeholder="Nome completo" autoComplete="name" />
@@ -264,24 +385,71 @@ APP_URL=https://pay-flow.shop`;
               </label>
             </div>
             <label className="grid gap-2 text-sm font-semibold">
-              CPF/CNPJ opcional
+              CPF/CNPJ real
               <input className="field" value={lead.document} onChange={(event) => setLeadField(setLead, "document", event.target.value)} placeholder="Somente numeros" inputMode="numeric" />
+            </label>
+            <div className="grid gap-3 md:grid-cols-[120px_1fr_110px]">
+              <label className="grid gap-2 text-sm font-semibold">
+                CEP
+                <input className="field" value={lead.zipCode} onChange={(event) => setLeadField(setLead, "zipCode", event.target.value)} placeholder="01000000" inputMode="numeric" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold">
+                Rua
+                <input className="field" value={lead.street} onChange={(event) => setLeadField(setLead, "street", event.target.value)} placeholder="Rua/Avenida" autoComplete="address-line1" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold">
+                Numero
+                <input className="field" value={lead.streetNumber} onChange={(event) => setLeadField(setLead, "streetNumber", event.target.value)} placeholder="123" autoComplete="address-line2" />
+              </label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-[1fr_1fr_70px]">
+              <label className="grid gap-2 text-sm font-semibold">
+                Bairro
+                <input className="field" value={lead.neighborhood} onChange={(event) => setLeadField(setLead, "neighborhood", event.target.value)} placeholder="Bairro" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold">
+                Cidade
+                <input className="field" value={lead.city} onChange={(event) => setLeadField(setLead, "city", event.target.value)} placeholder="Cidade" autoComplete="address-level2" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold">
+                UF
+                <input className="field uppercase" value={lead.state} onChange={(event) => setLeadField(setLead, "state", event.target.value)} placeholder="SP" maxLength={2} autoComplete="address-level1" />
+              </label>
+            </div>
+            <label className="grid gap-2 text-sm font-semibold">
+              Complemento
+              <input className="field" value={lead.complement} onChange={(event) => setLeadField(setLead, "complement", event.target.value)} placeholder="Apto, sala ou referencia" />
             </label>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <button className="btn-primary sm:col-span-2" type="button" disabled={loadingAction === "create-payment" || !realPaymentReady} onClick={createRealPayment}>
+              {loadingAction === "create-payment" ? <RefreshCcw className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CreditCard className="h-4 w-4" aria-hidden="true" />}
+              {loadingAction === "create-payment" ? "Gerando..." : "Gerar pagamento real"}
+            </button>
             <ActionButton loading={loadingAction === "pending"} disabled={!leadReady} onClick={() => simulate("pending")}>
-              Testar pendente
+              Registrar pendente
             </ActionButton>
             <ActionButton loading={loadingAction === "paid"} disabled={!leadReady} onClick={() => simulate("paid")}>
-              Testar pago
+              Registrar pago
             </ActionButton>
             <ActionButton loading={loadingAction === "failed"} disabled={!leadReady} onClick={() => simulate("failed")}>
-              Testar recusado
+              Registrar recusado
             </ActionButton>
             <ActionButton loading={loadingAction === "expired"} disabled={!leadReady} onClick={() => simulate("expired")}>
-              Testar expirado
+              Registrar expirado
             </ActionButton>
           </div>
+          {realPayment?.transaction ? (
+            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+              <p className="font-semibold">Umbrella: {realPayment.transaction.status ?? "status pendente"}</p>
+              <p className="mt-1 font-mono text-xs">{realPayment.transaction.id ?? "sem id retornado"}</p>
+              {realPayment.transaction.secureUrl || realPayment.transaction.payUrl || realPayment.transaction.webUrl ? (
+                <a className="mt-2 inline-flex font-semibold text-primary underline" href={realPayment.transaction.secureUrl ?? realPayment.transaction.payUrl ?? realPayment.transaction.webUrl ?? "#"} target="_blank" rel="noreferrer">
+                  Abrir pagamento
+                </a>
+              ) : null}
+            </div>
+          ) : null}
           {lastSimulation?.result?.payment ? (
             <div className="mt-4 rounded-md border border-border bg-white p-3 text-sm">
               <p className="font-semibold">Ultimo pagamento: {lastSimulation.result.payment.status}</p>
@@ -342,8 +510,12 @@ function ActionButton({ children, loading, disabled, onClick }: { children: Reac
   );
 }
 
-function setLeadField(setLead: Dispatch<SetStateAction<LeadForm>>, key: keyof LeadForm, value: string) {
+function setLeadField<K extends keyof LeadForm>(setLead: Dispatch<SetStateAction<LeadForm>>, key: K, value: LeadForm[K]) {
   setLead((current) => ({ ...current, [key]: value }));
+}
+
+function setPaymentField<K extends keyof PaymentForm>(setPayment: Dispatch<SetStateAction<PaymentForm>>, key: K, value: PaymentForm[K]) {
+  setPayment((current) => ({ ...current, [key]: value }));
 }
 
 function NoticeCard({ notice }: { notice: ActionNotice }) {

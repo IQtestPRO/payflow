@@ -2,6 +2,50 @@ import type { PaymentStatus } from "@/lib/types";
 import type { NormalizedPaymentWebhook, PaymentProvider } from "@/providers/payments/types";
 import { umbrellaWebhookSchema } from "@/server/validation/schemas";
 
+export type UmbrellaCreateTransactionInput = {
+  amount: number;
+  currency: string;
+  paymentMethod: "PIX" | "BOLETO";
+  installments: number;
+  customer: {
+    name: string;
+    email: string;
+    document: {
+      number: string;
+      type: "CPF" | "CNPJ";
+    };
+    phone: string;
+    externalRef?: string;
+    address: {
+      street: string;
+      streetNumber: string;
+      complement?: string;
+      zipCode: string;
+      neighborhood: string;
+      city: string;
+      state: string;
+      country: string;
+    };
+  };
+  items: Array<{
+    title: string;
+    unitPrice: number;
+    quantity: number;
+    tangible: boolean;
+    externalRef?: string;
+  }>;
+  boleto?: {
+    expiresInDays: number;
+  };
+  pix?: {
+    expiresInDays: number;
+  };
+  postbackUrl: string;
+  metadata: string;
+  traceable: boolean;
+  ip?: string;
+};
+
 const statusMap: Record<string, PaymentStatus> = {
   processing: "PENDING",
   created: "CREATED",
@@ -83,12 +127,17 @@ export class UmbrellaProvider implements PaymentProvider {
           stringValue(read(record, "checkout_url")) ??
           stringValue(read(record, "checkoutUrl")) ??
           stringValue(read(record, "secureUrl")) ??
+          stringValue(read(record, "payUrl")) ??
+          stringValue(read(record, "webUrl")) ??
+          stringValue(read(record, "appUrl")) ??
           null,
         pixCode:
           stringValue(read(record, "pix_code")) ??
           stringValue(read(record, "pixCode")) ??
+          stringValue(read(record, "qrCode")) ??
           stringValue(read(objectValue(read(record, "pix")), "qrcode")) ??
           stringValue(read(objectValue(read(record, "pix")), "qrCode")) ??
+          stringValue(read(objectValue(read(record, "pix")), "payload")) ??
           stringValue(read(objectValue(read(record, "pix")), "emv")) ??
           null,
         boletoUrl:
@@ -104,8 +153,8 @@ export class UmbrellaProvider implements PaymentProvider {
   }
 
   async testConnection() {
-    const baseUrl = process.env.UMBRELLA_API_BASE_URL;
-    const apiKey = process.env.UMBRELLA_API_KEY;
+    const baseUrl = umbrellaBaseUrl();
+    const apiKey = umbrellaApiKey();
 
     if (!baseUrl || !apiKey) {
       return {
@@ -115,7 +164,7 @@ export class UmbrellaProvider implements PaymentProvider {
     }
 
     try {
-      const response = await fetch(umbrellaPaymentMethodsUrl(baseUrl), {
+      const response = await fetch(umbrellaApiUrl(baseUrl, "/api/user/checkout/payment-methods"), {
         method: "GET",
         headers: umbrellaHeaders(apiKey)
       });
@@ -138,20 +187,62 @@ export class UmbrellaProvider implements PaymentProvider {
       };
     }
   }
+
+  async createTransaction(input: UmbrellaCreateTransactionInput) {
+    const baseUrl = umbrellaBaseUrl();
+    const apiKey = umbrellaApiKey();
+
+    if (!baseUrl || !apiKey) {
+      throw new Error("Configure UMBRELLA_API_BASE_URL e UMBRELLA_API_KEY");
+    }
+
+    const response = await fetch(umbrellaApiUrl(baseUrl, "/api/user/transactions"), {
+      method: "POST",
+      headers: umbrellaHeaders(apiKey),
+      body: JSON.stringify(input)
+    });
+    const json = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const message = readUmbrellaError(json) ?? `Umbrella respondeu ${response.status}`;
+      throw new Error(message);
+    }
+
+    return json;
+  }
 }
 
 function umbrellaHeaders(apiKey: string) {
   return {
     "Content-Type": "application/json",
-    "User-Agent": "UMBRELLAB2B/1.0",
+    "User-Agent": umbrellaUserAgent(),
     "x-api-key": apiKey
   };
 }
 
-function umbrellaPaymentMethodsUrl(baseUrl: string) {
+function umbrellaApiUrl(baseUrl: string, path: string) {
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
-  const path = normalizedBaseUrl.endsWith("/api") ? "/user/checkout/payment-methods" : "/api/user/checkout/payment-methods";
-  return `${normalizedBaseUrl}${path}`;
+  const normalizedPath = normalizedBaseUrl.endsWith("/api") && path.startsWith("/api/") ? path.slice(4) : path;
+  return `${normalizedBaseUrl}${normalizedPath}`;
+}
+
+function umbrellaBaseUrl() {
+  return process.env.UMBRELLA_API_BASE_URL || process.env.UMBRELLAPAG_BASE_URL;
+}
+
+function umbrellaApiKey() {
+  return process.env.UMBRELLA_API_KEY || process.env.UMBRELLAPAG_API_KEY;
+}
+
+function umbrellaUserAgent() {
+  return process.env.UMBRELLA_USER_AGENT || process.env.UMBRELLAPAG_USER_AGENT || "UMBRELLAB2B/1.0";
+}
+
+function readUmbrellaError(value: unknown) {
+  const record = objectValue(value);
+  const error = read(record, "error");
+  const message = read(record, "message");
+  return stringValue(message) ?? stringValue(error) ?? null;
 }
 
 function unwrapUmbrellaPayload(payload: unknown): Record<string, unknown> {

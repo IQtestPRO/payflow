@@ -13,3 +13,4 @@ tsconfig.tsbuildinfo
 
 .vercel
 .env*.local
+dados umbrella.txt

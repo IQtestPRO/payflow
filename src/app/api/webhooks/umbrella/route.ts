@@ -5,7 +5,7 @@ import { processUmbrellaWebhookPayload } from "@/server/services/webhooks";
 export async function POST(request: Request) {
   const raw = await request.text();
   const signature = request.headers.get("x-umbrella-signature") ?? request.headers.get("x-signature");
-  const valid = await verifyHmacSignature(process.env.UMBRELLA_WEBHOOK_SECRET, raw, signature);
+  const valid = await verifyHmacSignature(process.env.UMBRELLA_WEBHOOK_SECRET || process.env.UMBRELLAPAG_WEBHOOK_SECRET, raw, signature);
   if (!valid) return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
 
   try {

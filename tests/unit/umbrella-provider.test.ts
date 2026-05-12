@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { UmbrellaProvider } from "../../src/providers/payments/umbrella";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { UmbrellaProvider, type UmbrellaCreateTransactionInput } from "../../src/providers/payments/umbrella";
 
 describe("UmbrellaProvider", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.UMBRELLA_API_BASE_URL;
+    delete process.env.UMBRELLA_API_KEY;
+    delete process.env.UMBRELLA_USER_AGENT;
+  });
+
   it("normalizes snake-case webhook payloads without converting amount", () => {
     const provider = new UmbrellaProvider();
     const normalized = provider.normalizeWebhook({
@@ -75,5 +82,75 @@ describe("UmbrellaProvider", () => {
     expect(normalized.payment.pixCode).toBe("0002010102122688");
     expect(normalized.payment.checkoutUrl).toBe("https://checkout.umbrellapag.com/tx-umbrella-123");
     expect(normalized.customer.document).toBe("12345678900");
+  });
+
+  it("creates Umbrella transactions with configured headers and API path", async () => {
+    process.env.UMBRELLA_API_BASE_URL = "https://api.example.com/api";
+    process.env.UMBRELLA_API_KEY = "test-key";
+    process.env.UMBRELLA_USER_AGENT = "UMBRELLAB2B/1.0";
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          id: "tx-created",
+          status: "WAITING_PAYMENT",
+          amount: 29700,
+          paymentMethod: "PIX"
+        }
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const payload: UmbrellaCreateTransactionInput = {
+      amount: 29700,
+      currency: "BRL",
+      paymentMethod: "PIX",
+      installments: 1,
+      customer: {
+        name: "Cliente Real",
+        email: "cliente@example.com",
+        document: {
+          number: "12345678900",
+          type: "CPF"
+        },
+        phone: "5511999999999",
+        address: {
+          street: "Avenida Paulista",
+          streetNumber: "123",
+          zipCode: "01310000",
+          neighborhood: "Bela Vista",
+          city: "Sao Paulo",
+          state: "SP",
+          country: "BR"
+        }
+      },
+      items: [
+        {
+          title: "Kit Funil WhatsApp",
+          unitPrice: 29700,
+          quantity: 1,
+          tangible: false
+        }
+      ],
+      pix: { expiresInDays: 1 },
+      postbackUrl: "https://pay-flow.shop/api/webhooks/umbrella",
+      metadata: "{\"source\":\"payflow\"}",
+      traceable: true,
+      ip: "127.0.0.1"
+    };
+
+    await new UmbrellaProvider().createTransaction(payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/user/transactions",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "User-Agent": "UMBRELLAB2B/1.0",
+          "x-api-key": "test-key"
+        }),
+        body: JSON.stringify(payload)
+      })
+    );
   });
 });

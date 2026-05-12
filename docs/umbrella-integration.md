@@ -35,13 +35,87 @@ NEXT_PUBLIC_APP_URL=https://pay-flow.shop
 1. Entre em `/integracoes`.
 2. No bloco `UmbrellaPag agora`, copie o webhook oficial.
 3. Preencha nome, telefone e email reais do lead.
-4. Clique em `Testar pendente`.
-5. Abra `/pagamentos` e confira o pagamento criado.
-6. Abra `/recuperacoes` e confira se a tentativa foi agendada quando houver fluxo ativo.
-7. Clique em `Testar pago` para validar cancelamento/conversao das recuperacoes relacionadas.
-8. Quando tiver `UMBRELLA_API_KEY`, clique em `Testar credenciais`.
+4. Preencha CPF/CNPJ, endereco, item, valor e metodo de pagamento.
+5. Clique em `Gerar pagamento real` para chamar a API da Umbrella.
+6. Abra `/pagamentos` e confira o pagamento criado.
+7. Abra `/recuperacoes` e confira se a tentativa foi agendada quando houver fluxo ativo.
+8. Use `Registrar pendente/pago/recusado/expirado` apenas para validar o processamento interno sem nova cobranca.
+9. Quando quiser validar credenciais sem criar transacao, clique em `Testar credenciais`.
 
-Importante: a UmbrellaPag so gera dados de pagamento com informacoes reais do lead. O PayFlow nao deve chamar a API real usando nome, telefone, email ou documento ficticios. O teste interno do painel exige dados preenchidos pelo usuario para manter esse fluxo alinhado com a regra da Umbrella.
+Importante: a UmbrellaPag so gera dados de pagamento com informacoes reais do lead. O PayFlow nao deve chamar a API real usando nome, telefone, email, documento ou endereco ficticios.
+
+## Gerar pagamento real
+
+Endpoint Umbrella:
+
+```text
+POST /api/user/transactions
+```
+
+Headers obrigatorios:
+
+```text
+x-api-key: <api-key>
+User-Agent: UMBRELLAB2B/1.0
+Content-Type: application/json
+```
+
+Payload minimo usado pelo PayFlow:
+
+```json
+{
+  "amount": 29700,
+  "currency": "BRL",
+  "paymentMethod": "PIX",
+  "installments": 1,
+  "customer": {
+    "name": "<nome-real-do-lead>",
+    "email": "<email-real-do-lead>",
+    "document": {
+      "number": "<cpf-ou-cnpj-real>",
+      "type": "CPF"
+    },
+    "phone": "<telefone-real-com-ddi>",
+    "externalRef": "payflow-<timestamp>",
+    "address": {
+      "street": "<rua>",
+      "streetNumber": "<numero>",
+      "complement": "<complemento>",
+      "zipCode": "<cep>",
+      "neighborhood": "<bairro>",
+      "city": "<cidade>",
+      "state": "<uf>",
+      "country": "BR"
+    }
+  },
+  "items": [
+    {
+      "title": "<nome-do-produto-ou-oferta>",
+      "unitPrice": 29700,
+      "quantity": 1,
+      "tangible": false,
+      "externalRef": "payflow-item"
+    }
+  ],
+  "pix": {
+    "expiresInDays": 1
+  },
+  "postbackUrl": "https://pay-flow.shop/api/webhooks/umbrella",
+  "metadata": "{\"source\":\"payflow\"}",
+  "traceable": true,
+  "ip": "<ip-do-cliente>"
+}
+```
+
+Para boleto, use `"paymentMethod": "BOLETO"` e envie:
+
+```json
+{
+  "boleto": {
+    "expiresInDays": 3
+  }
+}
+```
 
 ## Payload aceito
 

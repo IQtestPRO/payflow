@@ -6,16 +6,18 @@ export async function GET() {
   const auth = await requireApiUser();
   if (auth.response) return auth.response;
 
-  const apiBaseUrl = process.env.UMBRELLA_API_BASE_URL || "";
+  const apiBaseUrl = process.env.UMBRELLA_API_BASE_URL || process.env.UMBRELLAPAG_BASE_URL || "";
   const hasApiBaseUrl = Boolean(apiBaseUrl);
-  const hasApiKey = Boolean(process.env.UMBRELLA_API_KEY);
-  const webhookSecretConfigured = Boolean(process.env.UMBRELLA_WEBHOOK_SECRET);
+  const hasApiKey = Boolean(process.env.UMBRELLA_API_KEY || process.env.UMBRELLAPAG_API_KEY);
+  const hasUserAgent = Boolean(process.env.UMBRELLA_USER_AGENT || process.env.UMBRELLAPAG_USER_AGENT);
+  const webhookSecretConfigured = Boolean(process.env.UMBRELLA_WEBHOOK_SECRET || process.env.UMBRELLAPAG_WEBHOOK_SECRET);
 
   return NextResponse.json({
     provider: "umbrella",
     readyForRealApi: hasApiBaseUrl && hasApiKey,
     hasApiBaseUrl,
     hasApiKey,
+    hasUserAgent,
     webhookSecretConfigured,
     apiBaseUrl,
     webhookUrl: `${appUrl().replace(/\/$/, "")}/api/webhooks/umbrella`,
