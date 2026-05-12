@@ -2,6 +2,7 @@
 
 Identidade visual: a marca usa azul-marinho, azul eletrico e acento cyan-verde inspirados no logo PayFlow. As regras ficam em `docs/brand.md`, e o componente reutilizavel de marca fica em `src/components/brand/payflow-logo.tsx`.
 Assets visuais de integracoes ficam em `public/assets/integrations` e o inventario fica em `docs/integration-assets.md`.
+Skills Codex externas instaladas para design, ads e auditoria ficam inventariadas em `docs/codex-installed-skills.md`.
 
 PayFlow e um MVP SaaS para centralizar WhatsApp, ofertas, clientes, pagamentos pendentes, recuperacao e campanhas de trafego pago.
 
