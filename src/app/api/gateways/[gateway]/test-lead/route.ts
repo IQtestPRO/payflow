@@ -5,6 +5,7 @@ import { getPaymentGatewayAdapter } from "@/server/gateways/adapters";
 import type { GatewayId } from "@/server/gateways/registry";
 import { createOrUpdateCustomer, upsertPayment } from "@/server/repositories/payflow-repository";
 import { requireApiUser } from "@/server/services/api-auth";
+import { syncPaymentToUtmify } from "@/server/services/utmify-orders";
 
 const gatewayIds: GatewayId[] = ["umbrella", "tribopay", "mangofy", "sigilopay", "lytronpay", "allowpayments"];
 
@@ -23,10 +24,25 @@ const leadSchema = z.object({
     .refine((value) => value.length === 11, "CPF invalido")
 });
 
+const trackingSchema = z.object({
+  offerId: z.string().trim().min(1).max(120).optional().nullable(),
+  clickId: z.string().trim().min(1).max(160).optional().nullable(),
+  fbclid: z.string().trim().min(1).max(500).optional().nullable(),
+  source: z.string().trim().max(160).optional().nullable(),
+  medium: z.string().trim().max(160).optional().nullable(),
+  campaign: z.string().trim().max(260).optional().nullable(),
+  content: z.string().trim().max(260).optional().nullable(),
+  term: z.string().trim().max(260).optional().nullable(),
+  src: z.string().trim().max(260).optional().nullable(),
+  sck: z.string().trim().max(260).optional().nullable()
+});
+
 const schema = z.object({
   amount: z.coerce.number().positive().max(100000),
   itemTitle: z.string().trim().min(2).max(160),
-  lead: leadSchema
+  lead: leadSchema,
+  tracking: trackingSchema.optional(),
+  isTest: z.boolean().optional().default(true)
 });
 
 type RouteContext = {
@@ -57,7 +73,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Dados reais do lead, item e valor sao obrigatorios para gerar o teste." }, { status: 422 });
   }
 
-  const { amount, itemTitle, lead } = parsed.data;
+  const { amount, itemTitle, lead, tracking, isTest } = parsed.data;
   const payload = {
     amount,
     description: itemTitle,
@@ -110,8 +126,16 @@ export async function POST(request: Request, context: RouteContext) {
       },
       auth.user.workspaceId
     );
+    const utmify = await syncPaymentToUtmify({
+      payment,
+      customer,
+      tracking,
+      itemTitle,
+      rawSource: rawTransaction,
+      isTest
+    });
 
-    return NextResponse.json({ ok: true, gateway, transaction, customer: { id: customer.id }, payment: { id: payment.id } });
+    return NextResponse.json({ ok: true, gateway, transaction, customer: { id: customer.id }, payment: { id: payment.id }, utmify });
   } catch (error) {
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : "Falha ao gerar lead teste no gateway." },

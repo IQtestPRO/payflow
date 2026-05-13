@@ -4,6 +4,7 @@ import { getWhatsAppProvider } from "@/providers/whatsapp";
 import { UmbrellaProvider } from "@/providers/payments/umbrella";
 import { TriboPayProvider } from "@/providers/payments/tribopay";
 import { UtmifyProvider } from "@/providers/tracking/utmify";
+import { syncPaymentToUtmify } from "@/server/services/utmify-orders";
 
 export async function processWhatsAppWebhookPayload(payload: unknown, workspaceId?: string) {
   const targetWorkspaceId = workspaceId ?? (await getWorkspaceId());
@@ -70,14 +71,21 @@ export async function processUmbrellaWebhookPayload(payload: unknown, workspaceI
     },
     targetWorkspaceId
   );
+  const utmify = await syncPaymentToUtmify({
+    payment,
+    customer,
+    rawSource: normalized.raw,
+    itemTitle: normalized.payment.offerName,
+    isTest: false
+  });
 
   if (payment.status === "PAID") {
     await cancelRecoveryBecausePaid(payment);
-    return { payment, recovery: "converted" };
+    return { payment, recovery: "converted", utmify };
   }
 
   const recovery = await scheduleRecoveryForPayment(payment, targetWorkspaceId);
-  return { payment, recovery };
+  return { payment, recovery, utmify };
 }
 
 export async function processTriboPayWebhookPayload(payload: unknown, workspaceId?: string) {
@@ -119,14 +127,21 @@ export async function processTriboPayWebhookPayload(payload: unknown, workspaceI
     },
     targetWorkspaceId
   );
+  const utmify = await syncPaymentToUtmify({
+    payment,
+    customer,
+    rawSource: normalized.raw,
+    itemTitle: normalized.payment.offerName,
+    isTest: false
+  });
 
   if (payment.status === "PAID") {
     await cancelRecoveryBecausePaid(payment);
-    return { payment, recovery: "converted" };
+    return { payment, recovery: "converted", utmify };
   }
 
   const recovery = await scheduleRecoveryForPayment(payment, targetWorkspaceId);
-  return { payment, recovery };
+  return { payment, recovery, utmify };
 }
 
 export async function processUtmifyWebhookPayload(payload: unknown, workspaceId?: string) {
