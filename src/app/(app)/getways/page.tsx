@@ -76,6 +76,6 @@ function normalizePanel(value: string | undefined): GatewayPanelMode | null {
 }
 
 function normalizeGatewayId(value: string | undefined): GatewayId | null {
-  if (value === "umbrella" || value === "mangofy" || value === "sigilopay" || value === "lytronpay" || value === "allowpayments") return value;
+  if (value === "umbrella" || value === "tribopay" || value === "mangofy" || value === "sigilopay" || value === "lytronpay" || value === "allowpayments") return value;
   return null;
 }

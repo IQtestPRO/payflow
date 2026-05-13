@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">TriboPay</title>
+  <desc id="desc">Logo TriboPay em fundo azul com simbolo tp verde e branco.</desc>
+  <rect width="512" height="512" rx="0" fill="#303754"/>
+  <defs>
+    <linearGradient id="tribo-green" x1="151" y1="118" x2="151" y2="394" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#05D6AA"/>
+      <stop offset="1" stop-color="#05BE94"/>
+    </linearGradient>
+    <linearGradient id="tribo-white" x1="320" y1="186" x2="398" y2="335" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBFBF7"/>
+      <stop offset="0.58" stop-color="#F7F7F2"/>
+      <stop offset="1" stop-color="#D9D8D2"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="72" y="95" width="368" height="330" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#141927" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <g filter="url(#soft-shadow)">
+    <path fill="url(#tribo-green)" d="M133 119h73c42 0 76 34 76 76v1h-76v126c0 39 19 61 55 61h21v10h-64c-52 0-85-33-85-85V219H87v-62h46v-38Z"/>
+    <path fill="url(#tribo-green)" d="M87 157h218v62H87z"/>
+    <path fill="url(#tribo-white)" d="M305 157h74c44 0 80 36 80 80s-36 80-80 80h-74v-62h72c11 0 20-8 20-18s-9-18-20-18h-72v-62Z"/>
+    <path fill="#F6F5F0" d="M305 255h62v139h-62z"/>
+    <path fill="#202846" d="M206 219h100v62H206z"/>
+  </g>
+</svg>

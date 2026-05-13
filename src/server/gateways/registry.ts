@@ -1,6 +1,6 @@
 import { CreditCard, FileText, Landmark, ShieldCheck, type LucideIcon } from "lucide-react";
 
-export type GatewayId = "umbrella" | "mangofy" | "sigilopay" | "lytronpay" | "allowpayments";
+export type GatewayId = "umbrella" | "tribopay" | "mangofy" | "sigilopay" | "lytronpay" | "allowpayments";
 export type GatewayUiStatus = "configured" | "awaiting_docs" | "pending_credentials" | "disabled";
 export type GatewayDocsStatus =
   | "ready_public_docs"
@@ -324,6 +324,161 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       configAction: {
         label: "Configurar",
         href: "#docs-mangofy",
+        kind: "internal"
+      }
+    },
+    {
+      id: "tribopay",
+      name: "TriboPay",
+      displayName: "TriboPay",
+      uiLabel: "TriboPay",
+      description: "API publica para transacoes, produtos, saldo, saques, contas bancarias e postbacks.",
+      status: "awaiting_docs",
+      docsStatus: "ready_public_docs",
+      websiteUrl: "https://docs.tribopay.com.br/",
+      docsUrl: "https://docs.tribopay.com.br/",
+      logo: "/assets/gateways/tribopay.svg",
+      logoAlt: "Logo da TriboPay",
+      fallbackSymbol: "T",
+      icon: CreditCard,
+      isConfigured: false,
+      integrationStatus: "PENDING",
+      methods: ["pix", "credit_card", "boleto"],
+      capabilities: {
+        publicApi: true,
+        createTransaction: true,
+        transactionLookup: true,
+        transactionList: true,
+        refunds: true,
+        products: true,
+        balance: true,
+        transfers: true,
+        installments: true,
+        bankAccounts: true,
+        postbacks: true,
+        webhooks: true,
+        cashout: "pending_docs"
+      },
+      credentialFields: [
+        {
+          key: "apiToken",
+          label: "API token",
+          type: "password",
+          required: false,
+          secret: true,
+          helpText: "A documentacao indica uso do parametro api_token em todas as requisicoes."
+        },
+        {
+          key: "baseUrl",
+          label: "Base URL",
+          type: "url",
+          required: false,
+          secret: false,
+          placeholder: "https://api.tribopay.com.br/api/public/v1",
+          helpText: "Base URL documentada para a API publica v1."
+        },
+        {
+          key: "postbackUrl",
+          label: "Postback URL",
+          type: "url",
+          required: false,
+          secret: false,
+          placeholder: "https://pay-flow.shop/api/webhooks/tribopay",
+          helpText: "URL futura para receber mudancas de status quando o adapter real for implementado."
+        }
+      ],
+      api: {
+        baseUrl: "https://api.tribopay.com.br/api/public/v1",
+        defaultHeaders: {
+          "Content-Type": "application/json"
+        },
+        endpoints: [
+          {
+            key: "transactions.create",
+            method: "POST",
+            path: "/transactions",
+            description: "Criar transacao com Pix, cartao de credito ou boleto.",
+            authRequired: true,
+            confirmed: true,
+            notes: ["Autenticacao documentada via query parameter api_token."]
+          },
+          {
+            key: "transactions.list",
+            method: "GET",
+            path: "/transactions",
+            description: "Listar transacoes com filtros de paginacao e status.",
+            authRequired: true,
+            confirmed: true,
+            notes: ["Status documentados: pending, paid, canceled e refunded."]
+          },
+          {
+            key: "transactions.get",
+            method: "GET",
+            path: "/transactions/{hash}",
+            description: "Consultar detalhes de uma transacao pelo hash.",
+            authRequired: true,
+            confirmed: true,
+            notes: ["Autenticacao documentada via query parameter api_token."]
+          },
+          {
+            key: "transactions.refund",
+            method: "POST",
+            path: "/transactions/{hash}/refund",
+            description: "Solicitar reembolso total ou parcial de uma transacao paga.",
+            authRequired: true,
+            confirmed: true
+          },
+          {
+            key: "products.list",
+            method: "GET",
+            path: "/products",
+            description: "Listar produtos cadastrados na conta.",
+            authRequired: true,
+            confirmed: true
+          },
+          {
+            key: "balance.get",
+            method: "GET",
+            path: "/balance",
+            description: "Consultar saldo atual da conta.",
+            authRequired: true,
+            confirmed: true
+          },
+          {
+            key: "transfers.create",
+            method: "POST",
+            path: "/transfers",
+            description: "Solicitar transferencia do saldo disponivel.",
+            authRequired: true,
+            confirmed: true
+          }
+        ]
+      },
+      docsReferences: [
+        { label: "TriboPay Docs", url: "https://docs.tribopay.com.br/", type: "official_docs" }
+      ],
+      docsNotes: [
+        "Docs publicas encontradas.",
+        "Base URL documentada: https://api.tribopay.com.br/api/public/v1.",
+        "Autenticacao documentada por parametro api_token.",
+        "A documentacao cobre transacoes, produtos, saldo e saques, contas bancarias e postbacks.",
+        "Valores monetarios aparecem em centavos e payloads/respostas usam JSON."
+      ],
+      pendingQuestions: [
+        "Confirmar token de sandbox e producao.",
+        "Confirmar assinatura/validacao de postback.",
+        "Confirmar payload completo de postback para todos os status.",
+        "Confirmar regras de boleto, expiracao e reembolso.",
+        "Confirmar fluxo definitivo de saques/cashout e contas bancarias."
+      ],
+      safetyNotes: [
+        "Nao implementar chamadas reais sem credenciais e teste controlado.",
+        "Nao expor api_token no frontend.",
+        "Postbacks devem validar idempotencia e status desconhecidos."
+      ],
+      configAction: {
+        label: "Configurar",
+        href: "#docs-tribopay",
         kind: "internal"
       }
     },
