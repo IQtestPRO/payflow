@@ -40,6 +40,10 @@ const docsStatusView: Record<GatewayRegistryItem["docsStatus"], { label: string;
     label: "API Reference",
     className: "border-cyan-200 bg-cyan-50 text-cyan-700"
   },
+  readme_reference_public: {
+    label: "API Reference publica",
+    className: "border-cyan-200 bg-cyan-50 text-cyan-700"
+  },
   public_marketing_only: {
     label: "Docs pendentes",
     className: "border-slate-200 bg-slate-50 text-slate-700"

@@ -7,6 +7,7 @@ export type GatewayDocsStatus =
   | "partial_public_spa"
   | "tutorial_public_reference_pending"
   | "readme_reference_gated"
+  | "readme_reference_public"
   | "public_marketing_only";
 export type GatewayCapabilityValue = boolean | "pending_docs" | "not_confirmed";
 export type PaymentMethod = "pix" | "credit_card" | "debit_card" | "boleto" | "bank_transfer" | "crypto";
@@ -403,9 +404,9 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       uiLabel: "LytronPay",
       description: "API Reference v1.0 localizada, endpoints exigem acesso ou permissao.",
       status: "awaiting_docs",
-      docsStatus: "readme_reference_gated",
+      docsStatus: "readme_reference_public",
       websiteUrl: "https://lytronpay.com/",
-      docsUrl: "https://web.lytronpay.com/docs/api",
+      docsUrl: "https://web.lytronpay.com/docs",
       logo: "/assets/gateways/lytronpay.svg",
       logoAlt: "Logo da LytronPay",
       fallbackSymbol: "L",
@@ -437,16 +438,17 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       ],
       docsReferences: [
         { label: "LytronPay Site", url: "https://lytronpay.com/", type: "official_website" },
-        { label: "LytronPay API Docs", url: "https://web.lytronpay.com/docs/api", type: "official_docs" },
+        { label: "LytronPay Docs", url: "https://web.lytronpay.com/docs", type: "official_docs" },
         { label: "LytronPay ReadMe Reference", url: "https://lytron-pay.readme.io/reference", type: "official_docs" }
       ],
       docsNotes: [
-        "API Reference v1.0 foi localizada.",
-        "Os endpoints detalhados nao ficaram disponiveis publicamente sem acesso/permissao.",
+        "O link oficial /docs redireciona para Lytron Pay API Reference no ReadMe.",
+        "API Reference v1.0 publica foi localizada.",
+        "Um registro OpenAPI foi identificado no hub, mas os endpoints completos ainda precisam ser extraidos e validados antes de implementar adapter real.",
         "Nao assumir metodos de pagamento ou payloads ate receber documentacao completa."
       ],
       pendingQuestions: [
-        "Solicitar acesso a documentacao ReadMe completa.",
+        "Extrair e validar o OpenAPI completo da Lytron.",
         "Solicitar API Key/token.",
         "Solicitar base URL sandbox/producao.",
         "Solicitar endpoints de pagamento.",
