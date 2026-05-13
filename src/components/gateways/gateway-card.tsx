@@ -4,13 +4,15 @@ import Link from "next/link";
 import type { GatewayRegistryItem } from "@/server/gateways/registry";
 import { cn } from "@/lib/utils";
 
+export type GatewayPanelMode = "config" | "docs";
+
 const statusView: Record<GatewayRegistryItem["status"], { label: string; className: string }> = {
   configured: {
     label: "Configurado",
     className: "border-emerald-200 bg-emerald-50 text-emerald-700"
   },
   awaiting_docs: {
-    label: "Aguardando docs",
+    label: "Nao configurado",
     className: "border-amber-200 bg-amber-50 text-amber-700"
   },
   pending_credentials: {
@@ -59,14 +61,17 @@ const methodLabels: Record<string, string> = {
   crypto: "Crypto"
 };
 
-export function GatewayCard({ gateway }: { gateway: GatewayRegistryItem }) {
+export function GatewayCard({ gateway, activePanel }: { gateway: GatewayRegistryItem; activePanel?: GatewayPanelMode | null }) {
   const status = statusView[gateway.status];
   const docsStatus = docsStatusView[gateway.docsStatus];
   const Icon = gateway.icon;
-  const configIsExternal = gateway.configAction.kind === "external";
+  const configHref = `/getways?gateway=${gateway.id}&panel=config#gateway-panel`;
+  const docsHref = `/getways?gateway=${gateway.id}&panel=docs#gateway-panel`;
+  const configIsActive = activePanel === "config";
+  const docsIsActive = activePanel === "docs";
 
   return (
-    <article className="data-panel group flex min-h-[280px] flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft">
+    <article className={cn("data-panel group flex min-h-[260px] flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft", activePanel && "border-primary/35 shadow-soft")}>
       <div className="relative border-b border-border/80 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-5">
         <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-navy via-brand-blue to-brand-cyan" />
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -109,14 +114,11 @@ export function GatewayCard({ gateway }: { gateway: GatewayRegistryItem }) {
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          <Link className="btn-primary w-full" href={gateway.configAction.href} target={configIsExternal ? "_blank" : undefined} rel={configIsExternal ? "noreferrer" : undefined}>
+          <Link className={cn("btn-primary w-full", !configIsActive && "bg-brand-blue")} href={configHref}>
             <Settings2 className="h-4 w-4" aria-hidden="true" />
-            {gateway.configAction.label}
+            Configurar
           </Link>
-          <Link
-            className="btn-secondary w-full"
-            href={`#docs-${gateway.id}`}
-          >
+          <Link className={cn("btn-secondary w-full", docsIsActive && "border-primary/35 bg-primary/5 text-primary")} href={docsHref}>
             <BookOpen className="h-4 w-4" aria-hidden="true" />
             Docs
           </Link>

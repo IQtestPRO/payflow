@@ -36,7 +36,7 @@ const uiStatusView: Record<GatewayUiStatus, { label: string; className: string }
     className: "border-emerald-200 bg-emerald-50 text-emerald-700"
   },
   awaiting_docs: {
-    label: "Aguardando documentacao",
+    label: "Nao configurado",
     className: "border-amber-200 bg-amber-50 text-amber-700"
   },
   pending_credentials: {

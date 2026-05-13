@@ -1,12 +1,23 @@
 import { CreditCard, ShieldCheck } from "lucide-react";
 import { GatewayCard } from "@/components/gateways/gateway-card";
-import { GatewayDocsPanel } from "@/components/gateways/gateway-docs-panel";
-import { UmbrellaQuickstart } from "@/components/integrations/umbrella-quickstart";
+import { GatewayActionPanel, type GatewayPanelMode } from "@/components/gateways/gateway-action-panel";
 import { PageHeader } from "@/components/ui/page-header";
-import { getGatewayRegistry } from "@/server/gateways/registry";
+import { getGatewayRegistry, type GatewayId } from "@/server/gateways/registry";
 
-export default function GetwaysPage() {
+type GetwaysPageProps = {
+  searchParams?: Promise<{
+    gateway?: string | string[];
+    panel?: string | string[];
+  }>;
+};
+
+export default async function GetwaysPage({ searchParams }: GetwaysPageProps) {
   const gateways = getGatewayRegistry();
+  const params = (await searchParams) ?? {};
+  const selectedGatewayId = normalizeGatewayId(readParam(params.gateway));
+  const selectedPanel = normalizePanel(readParam(params.panel));
+  const selectedGateway = selectedGatewayId ? gateways.find((gateway) => gateway.id === selectedGatewayId) ?? null : null;
+  const activePanel = selectedGateway ? selectedPanel : null;
   const configuredCount = gateways.filter((gateway) => gateway.isConfigured).length;
   const pendingCount = gateways.length - configuredCount;
 
@@ -37,36 +48,34 @@ export default function GetwaysPage() {
             <h2 className="mt-1 text-xl font-extrabold">Gateways preparados para a operacao</h2>
           </div>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Umbrella continua com a configuracao funcional atual. Os demais cards organizam a fila de integracao sem alterar regras de negocio.
+            A lista abre limpa. Use Configurar ou Docs para abrir apenas o gateway selecionado.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {gateways.map((gateway) => (
-            <GatewayCard key={gateway.id} gateway={gateway} />
+            <GatewayCard
+              key={gateway.id}
+              gateway={gateway}
+              activePanel={selectedGateway?.id === gateway.id ? activePanel : null}
+            />
           ))}
         </div>
       </section>
 
-      <section>
-        <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="section-label">Documentacao tecnica</p>
-            <h2 className="mt-1 text-xl font-extrabold">Credenciais, capacidades e pendencias</h2>
-          </div>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            O PayFlow mostra somente dados confirmados. Onde a documentacao publica nao abre endpoints completos, a integracao fica bloqueada ate envio das docs oficiais.
-          </p>
-        </div>
-        <div className="grid gap-4">
-          {gateways.map((gateway) => (
-            <GatewayDocsPanel key={gateway.id} gateway={gateway} />
-          ))}
-        </div>
-      </section>
-
-      <section id="umbrella-configuracao" className="scroll-mt-6">
-        <UmbrellaQuickstart />
-      </section>
+      <GatewayActionPanel gateway={selectedGateway} panel={activePanel} />
     </div>
   );
+}
+
+function readParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function normalizePanel(value: string | undefined): GatewayPanelMode | null {
+  return value === "config" || value === "docs" ? value : null;
+}
+
+function normalizeGatewayId(value: string | undefined): GatewayId | null {
+  if (value === "umbrella" || value === "mangofy" || value === "sigilopay" || value === "lytronpay" || value === "allowpayments") return value;
+  return null;
 }
