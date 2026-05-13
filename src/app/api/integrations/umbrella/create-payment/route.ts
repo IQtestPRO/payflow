@@ -42,11 +42,24 @@ const leadSchema = z.object({
   address: addressSchema
 });
 
+const trackingSchema = z.object({
+  offerId: z.string().trim().min(1).max(120).optional().nullable(),
+  offerSlug: z.string().trim().min(1).max(160).optional().nullable(),
+  clickId: z.string().trim().min(1).max(160).optional().nullable(),
+  fbclid: z.string().trim().min(1).max(500).optional().nullable(),
+  utmSource: z.string().trim().max(160).optional().nullable(),
+  utmMedium: z.string().trim().max(160).optional().nullable(),
+  utmCampaign: z.string().trim().max(260).optional().nullable(),
+  utmContent: z.string().trim().max(260).optional().nullable(),
+  utmTerm: z.string().trim().max(260).optional().nullable()
+});
+
 const schema = z.object({
   amount: z.coerce.number().positive().max(100000),
   itemTitle: z.string().trim().min(2).max(160),
   paymentMethod: paymentMethodSchema.default("PIX"),
-  lead: leadSchema
+  lead: leadSchema,
+  tracking: trackingSchema.optional()
 });
 
 export async function POST(request: Request) {
@@ -58,7 +71,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Dados reais do lead, endereco, item e valor sao obrigatorios para gerar pagamento Umbrella." }, { status: 422 });
   }
 
-  const { amount, itemTitle, lead, paymentMethod } = parsed.data;
+  const { amount, itemTitle, lead, paymentMethod, tracking } = parsed.data;
   const amountInCents = Math.round(amount * 100);
   const externalRef = `payflow-${Date.now()}`;
   const provider = new UmbrellaProvider();
@@ -96,7 +109,7 @@ export async function POST(request: Request) {
           unitPrice: amountInCents,
           quantity: 1,
           tangible: false,
-          externalRef: "payflow-item"
+          externalRef: tracking?.offerSlug || "payflow-item"
         }
       ],
       pix: paymentMethod === "PIX" ? { expiresInDays: 1 } : undefined,
@@ -105,7 +118,20 @@ export async function POST(request: Request) {
       metadata: JSON.stringify({
         source: "payflow",
         workspaceId: auth.user.workspaceId,
-        externalRef
+        externalRef,
+        offerId: tracking?.offerId || null,
+        offerSlug: tracking?.offerSlug || null,
+        clickId: tracking?.clickId || null,
+        fbclid: tracking?.fbclid || null,
+        utm: tracking
+          ? {
+              source: tracking.utmSource || null,
+              medium: tracking.utmMedium || null,
+              campaign: tracking.utmCampaign || null,
+              content: tracking.utmContent || null,
+              term: tracking.utmTerm || null
+            }
+          : null
       }),
       traceable: true,
       ip: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1"

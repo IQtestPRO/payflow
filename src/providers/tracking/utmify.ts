@@ -25,9 +25,12 @@ export class UtmifyProvider implements TrackingProvider {
   }
 
   async testConnection() {
+    const apiBaseUrl = process.env.UTMIFY_API_BASE_URL || process.env.UTMIFY_ENDPOINT;
+    const apiKey = process.env.UTMIFY_API_KEY || process.env.UTMIFY_API_TOKEN;
+
     return {
-      ok: Boolean(process.env.UTMIFY_API_BASE_URL && process.env.UTMIFY_API_KEY),
-      status: process.env.UTMIFY_API_KEY ? "Credenciais Utmify presentes" : "Provider mock aguardando credenciais"
+      ok: Boolean(apiBaseUrl && apiKey),
+      status: apiKey ? "Credenciais Utmify presentes" : "Provider mock aguardando credenciais"
     };
   }
 }

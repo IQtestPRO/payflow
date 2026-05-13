@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MusclePrime Brasil</title>
+    <meta
+      name="description"
+      content="MusclePrime Brasil - catalogo online de produtos selecionados."
+    />
+    <meta
+      name="keywords"
+      content="MusclePrime Brasil, catalogo, produtos, performance, bem-estar"
+    />
+    <meta property="og:title" content="MusclePrime Brasil" />
+    <meta property="og:description" content="Catalogo online de produtos selecionados." />
+    <meta property="og:site_name" content="MusclePrime Brasil" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pay-flow.shop/catalogos/muscleprime-brasil/" />
+    <meta name="theme-color" content="#ffffff" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="./assets/brand/muscleprime-logo-variation-3-premium-pharma.png"
+      title="MusclePrime Brasil"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Store",
+        "name": "MusclePrime Brasil",
+        "url": "https://pay-flow.shop/catalogos/muscleprime-brasil/",
+        "description": "Catalogo online de produtos selecionados.",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "BR"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="search-field">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input id="searchInput" type="search" placeholder="O que voce procura?" autocomplete="off" />
+      </div>
+      <a class="store-name" href="/catalogos/muscleprime-brasil/" aria-label="MusclePrime Brasil">
+        <img
+          src="./assets/brand/muscleprime-logo-variation-3-premium-pharma.png"
+          alt="MusclePrime Brasil"
+        />
+      </a>
+    </header>
+
+    <main class="catalog-shell">
+      <aside class="categories" aria-label="Categorias">
+        <h1>Categorias</h1>
+        <div id="categoryList"></div>
+      </aside>
+
+      <section class="catalog" id="catalogContent">
+        <div class="catalog-head">
+          <div>
+            <h2 id="catalogTitle">Tudo</h2>
+          </div>
+          <label class="sort-control" for="sortSelect">
+            <span>Ordenar</span>
+            <select id="sortSelect">
+              <option value="category">Categoria</option>
+              <option value="name">Nome A-Z</option>
+              <option value="priceAsc">Menor preco</option>
+              <option value="priceDesc">Maior preco</option>
+            </select>
+          </label>
+        </div>
+        <div class="product-list" id="productList"></div>
+        <div class="empty-state" id="emptyState" hidden>
+          <strong>Nenhum produto encontrado</strong>
+          <span>Tente outro termo ou selecione uma categoria diferente.</span>
+        </div>
+      </section>
+    </main>
+
+    <script src="./catalog-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

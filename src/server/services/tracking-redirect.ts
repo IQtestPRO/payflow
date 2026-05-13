@@ -57,7 +57,7 @@ export function buildWhatsAppTrackingMessage(input: {
 }) {
   const offerName = input.offer?.name?.trim() || humanizeSlug(input.offerSlug);
 
-  return `Quero saber mais sobre ${offerName}. Codigo ${input.clickId}.`;
+  return `Ola, tenho interesse em ${offerName}. Codigo ${input.clickId}.`;
 }
 
 export function buildWhatsAppUrl(phone: string, message: string) {

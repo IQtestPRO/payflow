@@ -7,6 +7,7 @@ import {
   resolveTrackingWhatsAppNumber,
   trackingParamsFromSearch
 } from "@/server/services/tracking-redirect";
+import { sendMetaCapiEvent } from "@/server/services/meta-capi";
 import { slugify } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       query: trackingParams.raw,
       referer: request.headers.get("referer"),
       userAgent: request.headers.get("user-agent")
+    }
+  });
+
+  await sendMetaCapiEvent({
+    eventName: "Contact",
+    eventId: clickId,
+    eventSourceUrl: url.toString(),
+    request,
+    fbclid: trackingParams.fbclid,
+    customData: {
+      content_name: offer?.name ?? offerSlug,
+      content_category: "whatsapp_offer",
+      currency: "BRL",
+      offer_slug: offerSlug,
+      utm_source: trackingParams.source,
+      utm_medium: trackingParams.medium,
+      utm_campaign: trackingParams.campaign,
+      utm_content: trackingParams.content,
+      utm_term: trackingParams.term
     }
   });
 
