@@ -65,9 +65,9 @@ export function GatewayDocsPanel({ gateway }: { gateway: GatewayRegistryItem }) 
 
   return (
     <article id={`docs-${gateway.id}`} className="data-panel scroll-mt-6 overflow-hidden">
-      <div className="grid gap-0 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
-        <div className="border-b border-border/80 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-5 xl:border-b-0 xl:border-r">
-          <div className="flex items-start gap-3">
+      <div className="border-b border-border/80 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-5">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.42fr)] xl:items-start">
+          <div className="flex min-w-0 items-start gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-white/80 bg-white shadow-sm ring-1 ring-slate-900/5">
               <Image className="h-7 w-7 object-contain" src={gateway.logo} alt={gateway.logoAlt} width={28} height={28} unoptimized />
             </span>
@@ -78,27 +78,93 @@ export function GatewayDocsPanel({ gateway }: { gateway: GatewayRegistryItem }) 
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Badge className={uiStatus.className}>{uiStatus.label}</Badge>
-            <Badge className={docsStatus.className}>{docsStatus.label}</Badge>
-          </div>
+          <div className="grid gap-3 rounded-lg border border-border/70 bg-white/80 p-3 shadow-inner-line">
+            <div className="flex flex-wrap gap-2">
+              <Badge className={uiStatus.className}>{uiStatus.label}</Badge>
+              <Badge className={docsStatus.className}>{docsStatus.label}</Badge>
+            </div>
 
-          <div className="mt-5">
-            <p className="text-xs font-bold uppercase tracking-normal text-muted-foreground">Metodos mapeados</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {gateway.methods.length ? (
-                gateway.methods.map((method) => (
-                  <span key={method} className="rounded-md border border-border/80 bg-white px-2.5 py-1 text-xs font-bold text-slate-700">
-                    {methodLabels[method]}
-                  </span>
-                ))
-              ) : (
-                <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">A confirmar</span>
-              )}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted-foreground">Metodos mapeados</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {gateway.methods.length ? (
+                  gateway.methods.map((method) => (
+                    <span key={method} className="rounded-md border border-border/80 bg-white px-2.5 py-1 text-xs font-bold text-slate-700">
+                      {methodLabels[method]}
+                    </span>
+                  ))
+                ) : (
+                  <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">A confirmar</span>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="mt-5 grid gap-2">
+      <div className="grid gap-4 p-5">
+        <section className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <InfoBlock icon={KeyRound} title="Credenciais">
+            {gateway.credentialFields.map((field) => (
+              <div key={field.key} className="rounded-md border border-border/70 bg-slate-50/70 px-3 py-2">
+                <span className="font-semibold text-foreground">{field.label}</span>
+                <span className="text-muted-foreground">, {field.secret ? "secret" : "nao secreto"}{field.required ? ", obrigatorio" : ", pendente"}</span>
+                {field.helpText ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{field.helpText}</p> : null}
+              </div>
+            ))}
+          </InfoBlock>
+
+          <InfoBlock icon={FileText} title="Capacidades">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {Object.entries(gateway.capabilities).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-slate-50/70 px-3 py-2">
+                  <span className="truncate font-semibold text-foreground">{formatCapabilityKey(key)}</span>
+                  <CapabilityBadge value={value} />
+                </div>
+              ))}
+            </div>
+          </InfoBlock>
+        </section>
+
+        <section className="rounded-lg border border-border/70 bg-slate-50/75 p-4 shadow-inner-line">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted-foreground">Endpoints</p>
+              <h4 className="mt-1 font-bold text-foreground">{hasConfirmedEndpoints ? "Rotas confirmadas" : "Aguardando documentacao oficial"}</h4>
+            </div>
+            {gateway.api?.baseUrl ? <code className="rounded-md border border-border/80 bg-white px-2.5 py-1 text-xs font-bold text-slate-700">{gateway.api.baseUrl}</code> : null}
+          </div>
+
+          {gateway.api?.endpoints?.length ? (
+            <div className="mt-4 grid gap-2 xl:grid-cols-2">
+              {gateway.api.endpoints.map((endpoint) => (
+                <div key={endpoint.key} className="rounded-md border border-border/80 bg-white p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-brand-navy px-2 py-1 text-[11px] font-black text-white">{endpoint.method}</span>
+                    <code className="break-all text-xs font-bold text-slate-700">{endpoint.path}</code>
+                    {endpoint.confirmed ? <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Confirmado</Badge> : <Badge className="border-amber-200 bg-amber-50 text-amber-700">Pendente</Badge>}
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{endpoint.description}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Nenhum endpoint foi cadastrado porque a documentacao publica nao expoe base URL, headers e payloads completos com seguranca.</p>
+          )}
+        </section>
+
+        <section className="grid gap-3 xl:grid-cols-3">
+          <ListBlock title="Notas" items={gateway.docsNotes} />
+          <ListBlock title="Pendencias" items={gateway.pendingQuestions} tone="warning" />
+          <ListBlock title="Seguranca" items={gateway.safetyNotes} tone="danger" />
+        </section>
+
+        <section className="rounded-lg border border-border/70 bg-white p-4 shadow-inner-line">
+          <div className="flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-primary" aria-hidden="true" />
+            <h4 className="font-bold">Links oficiais</h4>
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {gateway.docsReferences.map((reference) => (
               <a key={reference.url} className="control-chip justify-between" href={reference.url} target="_blank" rel="noreferrer">
                 <span className="inline-flex min-w-0 items-center gap-2">
@@ -109,63 +175,7 @@ export function GatewayDocsPanel({ gateway }: { gateway: GatewayRegistryItem }) 
               </a>
             ))}
           </div>
-        </div>
-
-        <div className="grid gap-4 p-5">
-          <section className="grid gap-3 md:grid-cols-2">
-            <InfoBlock icon={KeyRound} title="Credenciais">
-              {gateway.credentialFields.map((field) => (
-                <li key={field.key}>
-                  <span className="font-semibold text-foreground">{field.label}</span>
-                  <span className="text-muted-foreground">, {field.secret ? "secret" : "nao secreto"}{field.required ? ", obrigatorio" : ", pendente"}</span>
-                  {field.helpText ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{field.helpText}</p> : null}
-                </li>
-              ))}
-            </InfoBlock>
-
-            <InfoBlock icon={FileText} title="Capacidades">
-              {Object.entries(gateway.capabilities).map(([key, value]) => (
-                <li key={key} className="flex items-center justify-between gap-3">
-                  <span className="truncate font-semibold text-foreground">{formatCapabilityKey(key)}</span>
-                  <CapabilityBadge value={value} />
-                </li>
-              ))}
-            </InfoBlock>
-          </section>
-
-          <section className="rounded-lg border border-border/70 bg-slate-50/75 p-4 shadow-inner-line">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-normal text-muted-foreground">Endpoints</p>
-                <h4 className="mt-1 font-bold text-foreground">{hasConfirmedEndpoints ? "Rotas confirmadas" : "Aguardando documentacao oficial"}</h4>
-              </div>
-              {gateway.api?.baseUrl ? <code className="rounded-md border border-border/80 bg-white px-2.5 py-1 text-xs font-bold text-slate-700">{gateway.api.baseUrl}</code> : null}
-            </div>
-
-            {gateway.api?.endpoints?.length ? (
-              <div className="mt-4 grid gap-2">
-                {gateway.api.endpoints.map((endpoint) => (
-                  <div key={endpoint.key} className="rounded-md border border-border/80 bg-white p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-md bg-brand-navy px-2 py-1 text-[11px] font-black text-white">{endpoint.method}</span>
-                      <code className="text-xs font-bold text-slate-700">{endpoint.path}</code>
-                      {endpoint.confirmed ? <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Confirmado</Badge> : <Badge className="border-amber-200 bg-amber-50 text-amber-700">Pendente</Badge>}
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{endpoint.description}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">Nenhum endpoint foi cadastrado porque a documentacao publica nao expoe base URL, headers e payloads completos com seguranca.</p>
-            )}
-          </section>
-
-          <section className="grid gap-3 lg:grid-cols-3">
-            <ListBlock title="Notas" items={gateway.docsNotes} />
-            <ListBlock title="Pendencias" items={gateway.pendingQuestions} tone="warning" />
-            <ListBlock title="Seguranca" items={gateway.safetyNotes} tone="danger" />
-          </section>
-        </div>
+        </section>
       </div>
     </article>
   );
@@ -182,7 +192,7 @@ function InfoBlock({ icon: Icon, title, children }: { icon: LucideIcon; title: s
         <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
         <h4 className="font-bold">{title}</h4>
       </div>
-      <ul className="mt-3 space-y-2 text-sm leading-6">{children}</ul>
+      <div className="mt-3 space-y-2 text-sm leading-6">{children}</div>
     </div>
   );
 }

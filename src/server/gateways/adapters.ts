@@ -1,4 +1,6 @@
 import { UmbrellaProvider } from "@/providers/payments/umbrella";
+import { TriboPayProvider, type TriboPayCreateTransactionInput } from "@/providers/payments/tribopay";
+import { LytronPayProvider, type LytronPayCreatePixChargeInput } from "@/providers/payments/lytronpay";
 import type { GatewayId, PaymentGatewayConfig } from "@/server/gateways/registry";
 import { getGatewayRegistry } from "@/server/gateways/registry";
 
@@ -29,8 +31,62 @@ class UmbrellaGatewayAdapter implements PaymentGatewayAdapter {
   }
 }
 
+class TriboPayGatewayAdapter implements PaymentGatewayAdapter {
+  id: GatewayId = "tribopay";
+
+  isConfigured() {
+    return Boolean(process.env.TRIBOPAY_API_TOKEN || process.env.TRIBOPAY_API_KEY);
+  }
+
+  getDocs() {
+    return findGateway("tribopay");
+  }
+
+  async validateCredentials() {
+    const result = await new TriboPayProvider().testConnection();
+    return result.ok;
+  }
+
+  async createTransaction(payload: unknown): Promise<unknown> {
+    return new TriboPayProvider().createTransaction(payload as TriboPayCreateTransactionInput);
+  }
+
+  async getTransaction(id: string): Promise<unknown> {
+    return new TriboPayProvider().getTransaction(id);
+  }
+
+  async registerWebhook(): Promise<unknown> {
+    throw new Error("A TriboPay usa postback_url por transacao. Configure a URL /api/webhooks/tribopay ao criar a transacao.");
+  }
+}
+
+class LytronPayGatewayAdapter implements PaymentGatewayAdapter {
+  id: GatewayId = "lytronpay";
+
+  isConfigured() {
+    return Boolean(process.env.LYTRON_API_ACCESS_KEY || process.env.LYTRON_API_KEY);
+  }
+
+  getDocs() {
+    return findGateway("lytronpay");
+  }
+
+  async validateCredentials() {
+    const result = await new LytronPayProvider().testConnection();
+    return result.ok;
+  }
+
+  async createTransaction(payload: unknown): Promise<unknown> {
+    return new LytronPayProvider().createTransaction(payload as LytronPayCreatePixChargeInput);
+  }
+
+  async getTransaction(id: string): Promise<unknown> {
+    return new LytronPayProvider().getTransaction(id);
+  }
+}
+
 class PendingGatewayAdapter implements PaymentGatewayAdapter {
-  constructor(public id: Exclude<GatewayId, "umbrella">) {}
+  constructor(public id: Exclude<GatewayId, "umbrella" | "tribopay" | "lytronpay">) {}
 
   isConfigured() {
     return false;
@@ -51,6 +107,8 @@ class PendingGatewayAdapter implements PaymentGatewayAdapter {
 
 export function getPaymentGatewayAdapter(id: GatewayId): PaymentGatewayAdapter {
   if (id === "umbrella") return new UmbrellaGatewayAdapter();
+  if (id === "tribopay") return new TriboPayGatewayAdapter();
+  if (id === "lytronpay") return new LytronPayGatewayAdapter();
   return new PendingGatewayAdapter(id);
 }
 

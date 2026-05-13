@@ -2,6 +2,7 @@ import { createOrUpdateCustomer, getWorkspaceId, recordTrackingEvent, recordWebh
 import { cancelRecoveryBecausePaid, scheduleRecoveryForPayment } from "@/server/services/recovery";
 import { getWhatsAppProvider } from "@/providers/whatsapp";
 import { UmbrellaProvider } from "@/providers/payments/umbrella";
+import { TriboPayProvider } from "@/providers/payments/tribopay";
 import { UtmifyProvider } from "@/providers/tracking/utmify";
 
 export async function processWhatsAppWebhookPayload(payload: unknown, workspaceId?: string) {
@@ -55,6 +56,55 @@ export async function processUmbrellaWebhookPayload(payload: unknown, workspaceI
       document: normalized.customer.document,
       status: normalized.payment.status === "PAID" ? "BUYER" : "PAYMENT_PENDING",
       source: "Umbrella"
+    },
+    targetWorkspaceId
+  );
+
+  const payment = await upsertPayment(
+    {
+      ...normalized.payment,
+      workspaceId: targetWorkspaceId,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone
+    },
+    targetWorkspaceId
+  );
+
+  if (payment.status === "PAID") {
+    await cancelRecoveryBecausePaid(payment);
+    return { payment, recovery: "converted" };
+  }
+
+  const recovery = await scheduleRecoveryForPayment(payment, targetWorkspaceId);
+  return { payment, recovery };
+}
+
+export async function processTriboPayWebhookPayload(payload: unknown, workspaceId?: string) {
+  const targetWorkspaceId = workspaceId ?? (await getWorkspaceId());
+  const provider = new TriboPayProvider();
+  const normalized = provider.normalizeWebhook(payload);
+
+  const webhook = await recordWebhookEvent({
+    workspaceId: targetWorkspaceId,
+    provider: "TRIBOPAY",
+    eventType: normalized.eventType,
+    externalId: normalized.externalId,
+    rawPayloadJson: normalized.raw
+  });
+
+  if (webhook.duplicated) {
+    return { duplicated: true };
+  }
+
+  const customer = await createOrUpdateCustomer(
+    {
+      name: normalized.customer.name,
+      phone: normalized.customer.phone,
+      email: normalized.customer.email,
+      document: normalized.customer.document,
+      status: normalized.payment.status === "PAID" ? "BUYER" : "PAYMENT_PENDING",
+      source: "TriboPay"
     },
     targetWorkspaceId
   );

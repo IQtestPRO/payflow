@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { demoStore } from "../../src/lib/demo-data";
-import { processUmbrellaWebhookPayload, processWhatsAppWebhookPayload } from "../../src/server/services/webhooks";
+import { processTriboPayWebhookPayload, processUmbrellaWebhookPayload, processWhatsAppWebhookPayload } from "../../src/server/services/webhooks";
 
 vi.hoisted(() => {
   process.env.DATABASE_URL = "";
@@ -71,5 +71,38 @@ describe("webhook processing", () => {
     });
 
     expect(demoStore.recoveryAttempts.filter((attempt) => attempt.paymentId === pendingPayment.id).every((attempt) => attempt.status === "CONVERTED")).toBe(true);
+  });
+
+  it("schedules recovery attempts for a pending TriboPay payment", async () => {
+    const paymentId = `tribo-test-${Date.now()}`;
+    const result = await processTriboPayWebhookPayload({
+      transaction_hash: paymentId,
+      status: "pending",
+      amount: 19700,
+      currency: "BRL",
+      payment_method: "pix",
+      customer: {
+        name: "Cliente TriboPay",
+        phone_number: "551155554444",
+        email: "tribo@example.com",
+        document: "12345678900"
+      },
+      cart: [
+        {
+          product_hash: "offer-02",
+          title: "Kit Funil WhatsApp",
+          price: 19700,
+          quantity: 1,
+          tangible: false
+        }
+      ]
+    });
+
+    expect(result).toHaveProperty("payment");
+    const createdPayment = "payment" in result ? result.payment : null;
+    if (!createdPayment) throw new Error("Payment was not created");
+    expect(createdPayment.provider).toBe("TRIBOPAY");
+    expect(createdPayment.amount).toBe(197);
+    expect(demoStore.recoveryAttempts.some((attempt) => attempt.paymentId === createdPayment.id && attempt.status === "SCHEDULED")).toBe(true);
   });
 });

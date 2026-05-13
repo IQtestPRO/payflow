@@ -875,7 +875,7 @@ export async function createOrUpdateCustomer(
 
 export async function recordWebhookEvent(input: {
   workspaceId?: string;
-  provider: "WHATSAPP" | "UMBRELLA" | "UTMIFY" | "META_ADS";
+  provider: "WHATSAPP" | "UMBRELLA" | "TRIBOPAY" | "MANGOFY" | "SIGILOPAY" | "LYTRONPAY" | "ALLOWPAYMENTS" | "UTMIFY" | "META_ADS";
   eventType: string;
   externalId?: string | null;
   rawPayloadJson: unknown;

@@ -141,7 +141,7 @@ export type PaymentRecord = {
   customerPhone?: string | null;
   offerId?: string | null;
   offerName?: string | null;
-  provider: "UMBRELLA" | "MOCK";
+  provider: "UMBRELLA" | "TRIBOPAY" | "MANGOFY" | "SIGILOPAY" | "LYTRONPAY" | "ALLOWPAYMENTS" | "MOCK";
   providerPaymentId: string;
   status: PaymentStatus;
   amount: number;

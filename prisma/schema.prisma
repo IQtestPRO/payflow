@@ -79,6 +79,11 @@ enum MessageStatus {
 
 enum PaymentProviderName {
   UMBRELLA
+  TRIBOPAY
+  MANGOFY
+  SIGILOPAY
+  LYTRONPAY
+  ALLOWPAYMENTS
   MOCK
 }
 
@@ -128,6 +133,11 @@ enum CampaignStatus {
 enum WebhookProvider {
   WHATSAPP
   UMBRELLA
+  TRIBOPAY
+  MANGOFY
+  SIGILOPAY
+  LYTRONPAY
+  ALLOWPAYMENTS
   UTMIFY
   META_ADS
 }

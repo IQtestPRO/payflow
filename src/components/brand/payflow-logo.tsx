@@ -31,11 +31,11 @@ export function PayFlowLogo({ variant = "light", size = "md", showTagline = fals
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <PayFlowMark className={sizes.mark} />
+      <PayFlowMark className={sizes.mark} variant={variant} />
       <div className="min-w-0">
         <p className={cn("font-bold leading-none tracking-normal", sizes.word)}>
           <span className={dark ? "text-white" : "text-brand-navy"}>Pay</span>
-          <span className="bg-gradient-to-r from-brand-blue to-brand-electric bg-clip-text text-transparent">Flow</span>
+          <span className={dark ? "bg-gradient-to-r from-brand-cyan to-brand-green bg-clip-text text-transparent" : "bg-gradient-to-r from-brand-blue to-brand-electric bg-clip-text text-transparent"}>Flow</span>
         </p>
         {showTagline ? (
           <p className={cn("mt-1 font-semibold tracking-normal", sizes.tagline, dark ? "text-white/70" : "text-muted-foreground")}>
@@ -47,7 +47,9 @@ export function PayFlowLogo({ variant = "light", size = "md", showTagline = fals
   );
 }
 
-export function PayFlowMark({ className }: { className?: string }) {
+export function PayFlowMark({ className, variant = "light" }: { className?: string; variant?: "light" | "dark" }) {
+  const dark = variant === "dark";
+
   return (
     <svg className={cn("shrink-0", className)} viewBox="0 0 96 96" role="img" aria-label="PayFlow">
       <defs>
@@ -68,11 +70,11 @@ export function PayFlowMark({ className }: { className?: string }) {
           <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="#001A42" floodOpacity="0.18" />
         </filter>
       </defs>
-      <rect width="96" height="96" rx="22" fill="url(#payflow-mark-navy)" opacity="0.06" />
+      <rect width="96" height="96" rx="22" fill={dark ? "#FFFFFF" : "url(#payflow-mark-navy)"} opacity={dark ? "0.1" : "0.06"} />
       <g filter="url(#payflow-mark-shadow)">
         <path
           d="M31.5 15H58.5C73.5 15 84 25.8 84 40.5C84 55.2 73.5 66 58.5 66H44.5L47.5 51.5H58C64.7 51.5 69.5 47.1 69.5 40.5C69.5 33.9 64.7 29.5 58 29.5H29.5L31.5 15Z"
-          fill="url(#payflow-mark-navy)"
+          fill={dark ? "#F8FBFF" : "url(#payflow-mark-navy)"}
         />
         <path
           d="M22.5 46.5H43.5L36.8 82C36.2 85.1 33.5 87.3 30.3 87.3H18.4C14.4 87.3 11.4 83.7 12.1 79.8L17.5 51.9C18.1 48.8 20.8 46.5 22.5 46.5Z"

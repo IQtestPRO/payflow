@@ -78,6 +78,9 @@ export type PaymentGatewayConfig = {
 export type GatewayRegistryItem = PaymentGatewayConfig;
 
 export function getGatewayRegistry(): GatewayRegistryItem[] {
+  const triboPayConfigured = Boolean(process.env.TRIBOPAY_API_TOKEN || process.env.TRIBOPAY_API_KEY);
+  const lytronPayConfigured = Boolean(process.env.LYTRON_API_ACCESS_KEY || process.env.LYTRON_API_KEY);
+
   return [
     {
       id: "umbrella",
@@ -333,7 +336,7 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       displayName: "TriboPay",
       uiLabel: "TriboPay",
       description: "API publica para transacoes, produtos, saldo, saques, contas bancarias e postbacks.",
-      status: "awaiting_docs",
+      status: triboPayConfigured ? "configured" : "pending_credentials",
       docsStatus: "ready_public_docs",
       websiteUrl: "https://docs.tribopay.com.br/",
       docsUrl: "https://docs.tribopay.com.br/",
@@ -341,8 +344,8 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       logoAlt: "Logo da TriboPay",
       fallbackSymbol: "T",
       icon: CreditCard,
-      isConfigured: false,
-      integrationStatus: "PENDING",
+      isConfigured: triboPayConfigured,
+      integrationStatus: triboPayConfigured ? "CONNECTED" : "PENDING",
       methods: ["pix", "credit_card", "boleto"],
       capabilities: {
         publicApi: true,
@@ -513,12 +516,20 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       },
       credentialFields: [
         {
-          key: "apiKey",
-          label: "API Key",
+          key: "publicKey",
+          label: "Chave publica",
+          type: "text",
+          required: false,
+          secret: false,
+          helpText: "Chave publica fornecida no material local. Endpoints ainda pendentes."
+        },
+        {
+          key: "privateKey",
+          label: "Chave privada",
           type: "password",
           required: false,
           secret: true,
-          helpText: "Tutorial publico menciona obtencao de credenciais."
+          helpText: "Chave privada fornecida no material local. Nao expor no frontend."
         }
       ],
       docsReferences: [
@@ -558,7 +569,7 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       displayName: "LytronPay",
       uiLabel: "LytronPay",
       description: "API Reference v1.0 localizada, endpoints exigem acesso ou permissao.",
-      status: "awaiting_docs",
+      status: lytronPayConfigured ? "configured" : "pending_credentials",
       docsStatus: "readme_reference_public",
       websiteUrl: "https://lytronpay.com/",
       docsUrl: "https://web.lytronpay.com/docs",
@@ -566,31 +577,81 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       logoAlt: "Logo da LytronPay",
       fallbackSymbol: "L",
       icon: Landmark,
-      isConfigured: false,
-      integrationStatus: "PENDING",
-      methods: [],
+      isConfigured: lytronPayConfigured,
+      integrationStatus: lytronPayConfigured ? "CONNECTED" : "PENDING",
+      methods: ["pix"],
       capabilities: {
         apiReference: true,
-        createTransaction: "pending_docs",
+        createTransaction: true,
         checkout: "pending_docs",
-        pix: "pending_docs",
+        pix: true,
         card: "pending_docs",
         boleto: "pending_docs",
         webhooks: "pending_docs",
         refunds: "pending_docs",
-        cashout: "pending_docs",
+        payouts: true,
+        cashout: true,
         balance: "pending_docs"
       },
       credentialFields: [
         {
-          key: "apiKey",
-          label: "API Key",
+          key: "apiAccessKey",
+          label: "API Access Key",
           type: "password",
           required: false,
           secret: true,
-          helpText: "Aguardando acesso a API Reference completa."
+          helpText: "Usada no header Api-Access-Key."
+        },
+        {
+          key: "sellerId",
+          label: "Seller ID",
+          type: "text",
+          required: false,
+          secret: false,
+          helpText: "Identificador do seller informado no material local."
+        },
+        {
+          key: "apiSecretHash",
+          label: "API Secret Hash",
+          type: "password",
+          required: false,
+          secret: true,
+          helpText: "Material local informa secret hash, mas nao confirma o header. Validar antes de usar em request."
         }
       ],
+      api: {
+        baseUrl: "https://api.lytronpay.com/api/v1",
+        defaultHeaders: {
+          "Api-Access-Key": "{{LYTRON_API_ACCESS_KEY}}",
+          "Content-Type": "application/json"
+        },
+        endpoints: [
+          {
+            key: "charges.create",
+            method: "POST",
+            path: "/v1/charges",
+            description: "Criar cobranca Pix.",
+            authRequired: true,
+            confirmed: true
+          },
+          {
+            key: "charges.get",
+            method: "GET",
+            path: "/v1/charges/{txid}",
+            description: "Buscar cobranca pelo TXID.",
+            authRequired: true,
+            confirmed: true
+          },
+          {
+            key: "payouts.create",
+            method: "POST",
+            path: "/v1/payouts",
+            description: "Criar saque/payout.",
+            authRequired: true,
+            confirmed: true
+          }
+        ]
+      },
       docsReferences: [
         { label: "LytronPay Site", url: "https://lytronpay.com/", type: "official_website" },
         { label: "LytronPay Docs", url: "https://web.lytronpay.com/docs", type: "official_docs" },
@@ -599,23 +660,23 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       docsNotes: [
         "O link oficial /docs redireciona para Lytron Pay API Reference no ReadMe.",
         "API Reference v1.0 publica foi localizada.",
-        "Um registro OpenAPI foi identificado no hub, mas os endpoints completos ainda precisam ser extraidos e validados antes de implementar adapter real.",
-        "Nao assumir metodos de pagamento ou payloads ate receber documentacao completa."
+        "Material local confirma base URL https://api.lytronpay.com/api/v1.",
+        "Material local confirma Api-Access-Key como header.",
+        "Material local confirma cobrancas Pix, busca por TXID e payouts.",
+        "Payloads completos e assinatura de webhook ainda precisam ser validados antes de expor fluxo operacional completo."
       ],
       pendingQuestions: [
-        "Extrair e validar o OpenAPI completo da Lytron.",
-        "Solicitar API Key/token.",
-        "Solicitar base URL sandbox/producao.",
-        "Solicitar endpoints de pagamento.",
-        "Solicitar metodos suportados.",
+        "Solicitar payload completo para POST /v1/charges.",
+        "Solicitar payload completo para POST /v1/payouts.",
         "Solicitar documentacao de webhooks.",
         "Solicitar assinatura de webhook.",
         "Solicitar status transacionais.",
         "Solicitar endpoints de consulta/reembolso."
       ],
       safetyNotes: [
-        "Nao implementar adapter real ate receber documentacao tecnica completa.",
-        "Exibir como aguardando acesso as docs."
+        "Adapter real iniciado apenas no servidor.",
+        "Nao expor Api-Access-Key, seller id sensivel ou secret hash no frontend.",
+        "Nao usar API Secret Hash em headers ate a Lytron confirmar o formato oficial."
       ],
       configAction: {
         label: "Configurar",
@@ -657,12 +718,20 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       },
       credentialFields: [
         {
-          key: "apiKey",
-          label: "API Key",
+          key: "secretKey",
+          label: "Secret Key",
           type: "password",
           required: false,
           secret: true,
-          helpText: "Aguardando documentacao API oficial."
+          helpText: "Secret key fornecida no material local. Endpoints ainda pendentes."
+        },
+        {
+          key: "companyId",
+          label: "Company ID",
+          type: "text",
+          required: false,
+          secret: false,
+          helpText: "Identificador da empresa fornecido no material local."
         }
       ],
       docsReferences: [

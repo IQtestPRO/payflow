@@ -104,6 +104,52 @@ export const umbrellaWebhookSchema = z
   })
   .passthrough();
 
+export const triboPayWebhookSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]).optional(),
+    hash: z.union([z.string(), z.number()]).optional(),
+    transaction_hash: z.union([z.string(), z.number()]).optional(),
+    transactionHash: z.union([z.string(), z.number()]).optional(),
+    transaction_id: z.union([z.string(), z.number()]).optional(),
+    transactionId: z.union([z.string(), z.number()]).optional(),
+    status: z.string().optional(),
+    transaction_status: z.string().optional(),
+    transactionStatus: z.string().optional(),
+    amount: z.coerce.number().nonnegative().optional(),
+    total_amount: z.coerce.number().nonnegative().optional(),
+    totalAmount: z.coerce.number().nonnegative().optional(),
+    value: z.coerce.number().nonnegative().optional(),
+    currency: z.string().default("BRL"),
+    payment_method: z.string().optional(),
+    paymentMethod: z.string().optional(),
+    checkout_url: z.string().optional(),
+    checkoutUrl: z.string().optional(),
+    payment_url: z.string().optional(),
+    pix_code: z.string().optional(),
+    pixCode: z.string().optional(),
+    qr_code: z.string().optional(),
+    boleto_url: z.string().optional(),
+    boletoUrl: z.string().optional(),
+    billet_url: z.string().optional(),
+    expires_at: z.string().optional(),
+    expiresAt: z.string().optional(),
+    paid_at: z.string().optional(),
+    paidAt: z.string().optional(),
+    postback_url: z.string().optional(),
+    postbackUrl: z.string().optional(),
+    tracking: z.unknown().optional(),
+    metadata: z.unknown().optional(),
+    pix: z.unknown().optional(),
+    billet: z.unknown().optional(),
+    boleto: z.unknown().optional(),
+    customer: z.unknown().optional(),
+    cart: z.array(z.unknown()).optional(),
+    data: z.unknown().optional(),
+    payload: z.unknown().optional(),
+    transaction: z.unknown().optional()
+  })
+  .passthrough();
+
 export const utmifyWebhookSchema = z
   .object({
     eventType: z.string().default("tracking_event"),

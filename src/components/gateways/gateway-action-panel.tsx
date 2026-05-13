@@ -46,6 +46,7 @@ function GatewaySelectionEmptyState() {
 
 function GatewayConfigPanel({ gateway }: { gateway: GatewayRegistryItem }) {
   if (gateway.id === "umbrella") return <UmbrellaQuickstart />;
+  const hasServerAdapter = gateway.id === "tribopay" || gateway.id === "lytronpay";
 
   return (
     <article className="data-panel overflow-hidden">
@@ -59,7 +60,9 @@ function GatewayConfigPanel({ gateway }: { gateway: GatewayRegistryItem }) {
               <p className="section-label">Configuracao</p>
               <h2 className="mt-1 text-xl font-extrabold">{gateway.name}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Configuracao deste gateway ainda nao implementada. Adicione as credenciais conforme a documentacao oficial antes de ativar chamadas reais.
+                {hasServerAdapter
+                  ? "Adapter server-side iniciado. Configure as credenciais no ambiente da Vercel antes de ativar chamadas reais."
+                  : "Configuracao deste gateway ainda nao implementada. Adicione as credenciais conforme a documentacao oficial antes de ativar chamadas reais."}
               </p>
             </div>
           </div>
@@ -94,7 +97,11 @@ function GatewayConfigPanel({ gateway }: { gateway: GatewayRegistryItem }) {
             </li>
             <li className="flex gap-2">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
-              <span>O adapter deste gateway permanece bloqueado ate a API oficial ser validada.</span>
+              <span>
+                {hasServerAdapter
+                  ? "As chamadas reais ficam restritas ao servidor e dependem das variaveis de ambiente configuradas."
+                  : "O adapter deste gateway permanece bloqueado ate a API oficial ser validada."}
+              </span>
             </li>
             <li className="flex gap-2">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />

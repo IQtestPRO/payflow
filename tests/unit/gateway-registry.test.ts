@@ -20,9 +20,9 @@ describe("gateway registry", () => {
     const gateways = getGatewayRegistry().filter((gateway) => gateway.id !== "umbrella");
 
     gateways.forEach((gateway) => {
-      expect(gateway.status).toBe("awaiting_docs");
+      expect(["awaiting_docs", "pending_credentials", "configured"]).toContain(gateway.status);
       const confirmedEndpoints = gateway.api?.endpoints?.filter((endpoint) => endpoint.confirmed) ?? [];
-      if (gateway.docsStatus === "ready_public_docs") {
+      if (gateway.docsStatus === "ready_public_docs" || gateway.docsStatus === "readme_reference_public") {
         expect(confirmedEndpoints.length).toBeGreaterThan(0);
       } else {
         expect(confirmedEndpoints.length).toBe(0);
