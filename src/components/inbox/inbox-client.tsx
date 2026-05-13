@@ -80,7 +80,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
+    <div className="grid min-w-0 gap-4 xl:grid-cols-[420px_1fr]">
       <ConversationList
         conversations={filtered}
         selectedId={selected?.id}
@@ -94,7 +94,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
         onSearch={setSearch}
       />
 
-      <section className="data-panel flex min-h-[680px] flex-col overflow-hidden">
+      <section className="data-panel flex min-h-[680px] min-w-0 flex-col overflow-hidden">
         {selected ? (
           <>
             <header className="border-b border-border/80 bg-white/[0.96] p-4">
@@ -184,7 +184,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
               }}
             />
 
-            <div className="flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,251,255,0.86),rgba(239,246,253,0.92))] p-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,251,255,0.86),rgba(239,246,253,0.92))] p-4">
               {selected.messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
               ))}
