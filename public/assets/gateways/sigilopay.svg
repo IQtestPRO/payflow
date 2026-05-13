@@ -1,0 +1,20 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Logo SigiloPay</title>
+  <desc id="desc">Logo oficial SigiloPay fornecido pelo usuario.</desc>
+  <rect width="96" height="96" fill="url(#sigilo-bg)"/>
+  <rect x="27.5" y="27" width="41" height="42" rx="9.5" fill="#F7F7F9"/>
+  <path d="M43.7 38.5C45.2 34.8 50.8 34.8 52.3 38.5L54.2 43.2H62.1C63.8 43.2 64.6 45.4 63.2 46.3L55.4 51.6C53.7 52.8 52.7 54.7 52.7 56.8V57.3H43.3V56.8C43.3 54.7 42.3 52.8 40.6 51.6L32.8 46.3C31.4 45.4 32.2 43.2 33.9 43.2H41.8L43.7 38.5Z" fill="url(#sigilo-cut)"/>
+  <path d="M35.5 57.5C35.5 53.9 38.1 51.4 41.8 51.4C45.5 51.4 48 53.9 48 57.5C48 61.1 45.5 63.6 41.8 63.6C38.1 63.6 35.5 61.1 35.5 57.5ZM48 57.5C48 53.9 50.5 51.4 54.2 51.4C57.9 51.4 60.5 53.9 60.5 57.5C60.5 61.1 57.9 63.6 54.2 63.6C50.5 63.6 48 61.1 48 57.5Z" fill="url(#sigilo-cut)"/>
+  <path d="M46.9 57.3H49.1" stroke="url(#sigilo-cut)" stroke-width="3.2" stroke-linecap="round"/>
+  <defs>
+    <radialGradient id="sigilo-bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(24 78) rotate(-42) scale(91 82)">
+      <stop stop-color="#A970FF"/>
+      <stop offset="0.44" stop-color="#251B4F"/>
+      <stop offset="1" stop-color="#0C1126"/>
+    </radialGradient>
+    <linearGradient id="sigilo-cut" x1="36" y1="36" x2="60" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111731"/>
+      <stop offset="1" stop-color="#6E49BE"/>
+    </linearGradient>
+  </defs>
+</svg>

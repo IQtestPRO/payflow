@@ -1,8 +1,0 @@
-<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Identificacao visual LytronPay</title>
-  <desc id="desc">Placeholder tipografico para LytronPay.</desc>
-  <rect width="96" height="96" rx="22" fill="#ECFEFF"/>
-  <rect x="14" y="14" width="68" height="68" rx="18" fill="#075985"/>
-  <path d="M32 29H40.1V58.4H56.4V66H32V29Z" fill="white"/>
-  <path d="M57.2 29H65.4V48.8C65.4 59.1 59.8 65.8 49.9 67.2V59.5C54.8 58.3 57.2 54.8 57.2 48.8V29Z" fill="#67E8F9"/>
-</svg>

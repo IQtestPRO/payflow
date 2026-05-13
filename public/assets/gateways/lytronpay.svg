@@ -1,0 +1,19 @@
+<svg width="160" height="96" viewBox="0 0 160 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Logo LytronPay</title>
+  <desc id="desc">Logo oficial LytronPay fornecido pelo usuario.</desc>
+  <rect width="160" height="96" rx="0" fill="#020406"/>
+  <g transform="translate(15 29)">
+    <path d="M17 4.2L34.5 17.8C36.8 19.6 37 23 34.9 25L21.4 38.1C19.5 40 16.5 40 14.6 38.1L1.4 25C-0.6 23 -0.4 19.7 1.8 17.9L10.2 11.3L17 4.2Z" fill="url(#lytron-a)"/>
+    <path d="M14.7 18.2L29.2 29.2L20.3 37.6C18.7 39.1 16.2 39 14.8 37.3L5.7 26.4L14.7 18.2Z" fill="#13D3F6"/>
+    <path d="M12.7 10.6L23.9 1.6C25.5 0.3 27.9 0.6 29.1 2.3L34.9 10.3C36.1 12 35.7 14.4 34 15.6L24.3 22.6L12.7 10.6Z" fill="#20C3F4"/>
+    <path d="M2.3 18.7L12.6 10.6L20.9 19.4L9.6 27.4L2.3 18.7Z" fill="#18AEE8"/>
+  </g>
+  <text x="58" y="58" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" letter-spacing="-1">Lytron</text>
+  <text x="124" y="58" fill="#16B9EC" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" letter-spacing="-1">Pay</text>
+  <defs>
+    <linearGradient id="lytron-a" x1="2" y1="4" x2="35" y2="38" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22E6FF"/>
+      <stop offset="1" stop-color="#0B8BD8"/>
+    </linearGradient>
+  </defs>
+</svg>

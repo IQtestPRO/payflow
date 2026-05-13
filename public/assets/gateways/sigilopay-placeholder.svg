@@ -1,9 +1,0 @@
-<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Identificacao visual SigiloPay</title>
-  <desc id="desc">Placeholder tipografico para SigiloPay.</desc>
-  <rect width="96" height="96" rx="22" fill="#F5F3FF"/>
-  <rect x="14" y="14" width="68" height="68" rx="18" fill="#2E1065"/>
-  <path d="M31 40.5C34.7 35.7 40.4 33 48 33C55.6 33 61.3 35.7 65 40.5L60.8 44.1C57.8 40.8 53.6 39.1 48 39.1C42.4 39.1 38.2 40.8 35.2 44.1L31 40.5Z" fill="white"/>
-  <path d="M28 55.2C28 50.8 31.2 47.6 35.8 47.6C40.5 47.6 43.7 50.8 43.7 55.2C43.7 59.7 40.5 62.9 35.8 62.9C31.2 62.9 28 59.7 28 55.2ZM52.3 55.2C52.3 50.8 55.5 47.6 60.2 47.6C64.8 47.6 68 50.8 68 55.2C68 59.7 64.8 62.9 60.2 62.9C55.5 62.9 52.3 59.7 52.3 55.2Z" fill="white"/>
-  <path d="M43.2 55.2H52.8" stroke="white" stroke-width="4" stroke-linecap="round"/>
-</svg>

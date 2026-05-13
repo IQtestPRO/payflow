@@ -1,0 +1,15 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Logo AllowPay</title>
+  <desc id="desc">Logo oficial AllowPay fornecido pelo usuario.</desc>
+  <rect width="96" height="96" fill="url(#allow-bg)"/>
+  <path d="M21 62.8L38.4 25.8H48.2L30.8 62.8H21Z" fill="#F7F7FF"/>
+  <path d="M36.8 25.8H62.4C70 25.8 75 30.8 75 38C75 45.1 70 50.1 62.4 50.1H52.8L58.8 62.8H49L36.8 25.8ZM50.2 34L53.4 42H61.5C64.2 42 66 40.4 66 38C66 35.6 64.2 34 61.5 34H50.2Z" fill="#F7F7FF"/>
+  <path d="M30.8 62.8L40.7 42.5L50.2 62.8H40.5L36.2 53.6L31.9 62.8H30.8Z" fill="#F7F7FF"/>
+  <defs>
+    <radialGradient id="allow-bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(12 18) rotate(42) scale(112 104)">
+      <stop stop-color="#AA00D8"/>
+      <stop offset="0.45" stop-color="#17052D"/>
+      <stop offset="1" stop-color="#6F00B7"/>
+    </radialGradient>
+  </defs>
+</svg>
