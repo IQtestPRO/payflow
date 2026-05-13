@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Clipboard, Loader2, QrCode, ShieldCheck } from "lucide-react";
 import { useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import type { GatewayRegistryItem } from "@/server/gateways/registry";
+import type { GatewayId } from "@/server/gateways/registry";
 
 type LeadForm = {
   name: string;
@@ -35,14 +35,14 @@ const defaultLead: LeadForm = {
   document: ""
 };
 
-export function GatewayTestLead({ gateway }: { gateway: GatewayRegistryItem }) {
+export function GatewayTestLead({ gatewayId, gatewayName }: { gatewayId: GatewayId; gatewayName: string }) {
   const [lead, setLead] = useState(defaultLead);
   const [amount, setAmount] = useState("1.00");
-  const [itemTitle, setItemTitle] = useState(`Lead teste ${gateway.name}`);
+  const [itemTitle, setItemTitle] = useState(`Lead teste ${gatewayName}`);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TestLeadResponse | null>(null);
 
-  const isSupported = gateway.id === "lytronpay";
+  const isSupported = gatewayId === "lytronpay";
   const canSubmit = useMemo(() => {
     return Boolean(
       isSupported &&
@@ -62,7 +62,7 @@ export function GatewayTestLead({ gateway }: { gateway: GatewayRegistryItem }) {
     setLoading(true);
     setResult(null);
     try {
-      const response = await fetch(`/api/gateways/${gateway.id}/test-lead`, {
+      const response = await fetch(`/api/gateways/${gatewayId}/test-lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -88,7 +88,7 @@ export function GatewayTestLead({ gateway }: { gateway: GatewayRegistryItem }) {
           <h3 className="font-bold">Lead teste</h3>
         </div>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Teste operacional ainda nao habilitado para {gateway.name}. O painel ja esta preparado para receber o fluxo real quando a API for validada.
+          Teste operacional ainda nao habilitado para {gatewayName}. O painel ja esta preparado para receber o fluxo real quando a API for validada.
         </p>
       </section>
     );

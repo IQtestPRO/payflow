@@ -86,7 +86,7 @@ function GatewayConfigPanel({ gateway }: { gateway: GatewayRegistryItem }) {
 
       <div className="grid gap-4 p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="grid gap-4">
-          {gateway.isConfigured ? <GatewayTestLead gateway={gateway} /> : null}
+          {gateway.isConfigured ? <GatewayTestLead gatewayId={gateway.id} gatewayName={gateway.name} /> : null}
 
           <section className="rounded-lg border border-border/70 bg-slate-50/75 p-4 shadow-inner-line">
             <div className="flex items-center gap-2">
