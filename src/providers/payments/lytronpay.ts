@@ -1,9 +1,30 @@
 import type { NormalizedPaymentWebhook, PaymentProvider } from "@/providers/payments/types";
+import { createHmac } from "crypto";
 
-export type LytronPayCreatePixChargeInput = Record<string, unknown>;
+export type LytronPayCreatePixChargeInput = {
+  amount: number;
+  description?: string;
+  customer: {
+    name: string;
+    email?: string;
+    phone?: string;
+    document: {
+      type: "cpf";
+      number: string;
+    };
+  };
+};
 export type LytronPayCreatePayoutInput = Record<string, unknown>;
 
 const DEFAULT_LYTRON_BASE_URL = "https://api.lytronpay.com/api/v1";
+const VALIDATION_TXID = "payflow-validation";
+
+export class LytronPayError extends Error {
+  constructor(message: string, public status?: number) {
+    super(message);
+    this.name = "LytronPayError";
+  }
+}
 
 export class LytronPayProvider implements PaymentProvider {
   name = "lytronpay";
@@ -20,10 +41,25 @@ export class LytronPayProvider implements PaymentProvider {
       };
     }
 
-    return {
-      ok: true,
-      status: "LytronPay com credencial presente. Validacao online exige TXID ou criacao controlada de cobranca."
-    };
+    try {
+      await this.getTransaction(VALIDATION_TXID);
+      return {
+        ok: true,
+        status: "LytronPay respondeu a consulta de validacao."
+      };
+    } catch (error) {
+      if (error instanceof LytronPayError && error.status === 404) {
+        return {
+          ok: true,
+          status: "LytronPay respondeu com 404 esperado para TXID de validacao. Credencial aceita."
+        };
+      }
+
+      return {
+        ok: false,
+        status: error instanceof Error ? error.message : "Falha ao validar LytronPay"
+      };
+    }
   }
 
   async createTransaction(input: LytronPayCreatePixChargeInput) {
@@ -50,19 +86,16 @@ export class LytronPayProvider implements PaymentProvider {
 async function lytronRequest(path: string, init: RequestInit) {
   const accessKey = lytronAccessKey();
   if (!accessKey) throw new Error("Configure LYTRON_API_ACCESS_KEY");
+  const body = typeof init.body === "string" ? init.body : undefined;
 
   const response = await fetch(lytronApiUrl(path), {
     ...init,
-    headers: {
-      "Api-Access-Key": accessKey,
-      "Content-Type": "application/json",
-      ...init.headers
-    }
+    headers: lytronHeaders(accessKey, init.headers, body)
   });
   const json = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(readLytronError(json) ?? `LytronPay respondeu ${response.status}`);
+    throw new LytronPayError(readLytronError(json) ?? `LytronPay respondeu ${response.status}`, response.status);
   }
 
   return json;
@@ -77,6 +110,28 @@ function lytronApiUrl(path: string) {
 
 function lytronAccessKey() {
   return process.env.LYTRON_API_ACCESS_KEY || process.env.LYTRON_API_KEY;
+}
+
+function lytronTransactionSecret() {
+  return process.env.LYTRON_API_SECRET_HASH || process.env.LYTRON_TRANSACTION_SECRET;
+}
+
+function lytronTransactionHashHeader(body?: string) {
+  const secret = lytronTransactionSecret();
+  if (!secret || !body) return {};
+
+  return {
+    "Transaction-Hash": createHmac("sha256", secret).update(body).digest("hex")
+  };
+}
+
+function lytronHeaders(accessKey: string, initHeaders?: HeadersInit, body?: string) {
+  const headers = new Headers(initHeaders);
+  headers.set("Api-Access-Key", accessKey);
+  headers.set("Content-Type", "application/json");
+  const transactionHash = lytronTransactionHashHeader(body)["Transaction-Hash"];
+  if (transactionHash) headers.set("Transaction-Hash", transactionHash);
+  return headers;
 }
 
 function readLytronError(value: unknown) {

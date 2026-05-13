@@ -568,7 +568,7 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       name: "LytronPay",
       displayName: "LytronPay",
       uiLabel: "LytronPay",
-      description: "API Reference v1.0 localizada, endpoints exigem acesso ou permissao.",
+      description: "API Reference v1.0 localizada para cobrancas Pix, consulta por TXID e webhooks.",
       status: lytronPayConfigured ? "configured" : "pending_credentials",
       docsStatus: "readme_reference_public",
       websiteUrl: "https://lytronpay.com/",
@@ -616,20 +616,21 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
           type: "password",
           required: false,
           secret: true,
-          helpText: "Material local informa secret hash, mas nao confirma o header. Validar antes de usar em request."
+          helpText: "Usado para assinar requests com Transaction-Hash quando houver body."
         }
       ],
       api: {
         baseUrl: "https://api.lytronpay.com/api/v1",
         defaultHeaders: {
           "Api-Access-Key": "{{LYTRON_API_ACCESS_KEY}}",
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Transaction-Hash": "HMAC-SHA256(raw body, LYTRON_API_SECRET_HASH)"
         },
         endpoints: [
           {
             key: "charges.create",
             method: "POST",
-            path: "/v1/charges",
+            path: "/charges",
             description: "Criar cobranca Pix.",
             authRequired: true,
             confirmed: true
@@ -637,7 +638,7 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
           {
             key: "charges.get",
             method: "GET",
-            path: "/v1/charges/{txid}",
+            path: "/charges/{txid}",
             description: "Buscar cobranca pelo TXID.",
             authRequired: true,
             confirmed: true
@@ -645,8 +646,16 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
           {
             key: "payouts.create",
             method: "POST",
-            path: "/v1/payouts",
+            path: "/payouts",
             description: "Criar saque/payout.",
+            authRequired: true,
+            confirmed: true
+          },
+          {
+            key: "webhooks.update",
+            method: "PATCH",
+            path: "/me/webhook",
+            description: "Configurar webhook do seller.",
             authRequired: true,
             confirmed: true
           }
@@ -655,28 +664,28 @@ export function getGatewayRegistry(): GatewayRegistryItem[] {
       docsReferences: [
         { label: "LytronPay Site", url: "https://lytronpay.com/", type: "official_website" },
         { label: "LytronPay Docs", url: "https://web.lytronpay.com/docs", type: "official_docs" },
-        { label: "LytronPay ReadMe Reference", url: "https://lytron-pay.readme.io/reference", type: "official_docs" }
+        { label: "LytronPay ReadMe Reference", url: "https://lytron-pay.readme.io/reference", type: "official_docs" },
+        { label: "LytronPay OpenAPI", url: "https://api.lytronpay.com/docs/openapi.yaml", type: "official_docs" }
       ],
       docsNotes: [
         "O link oficial /docs redireciona para Lytron Pay API Reference no ReadMe.",
-        "API Reference v1.0 publica foi localizada.",
-        "Material local confirma base URL https://api.lytronpay.com/api/v1.",
-        "Material local confirma Api-Access-Key como header.",
-        "Material local confirma cobrancas Pix, busca por TXID e payouts.",
-        "Payloads completos e assinatura de webhook ainda precisam ser validados antes de expor fluxo operacional completo."
+        "OpenAPI publica confirma base URL https://api.lytronpay.com/api/v1.",
+        "Autenticacao por Api-Access-Key.",
+        "Transaction-Hash e HMAC-SHA256 do corpo bruto usando o secret hash, recomendado em rotas com body.",
+        "POST /charges cria cobranca Pix com amount, description e customer.",
+        "GET /charges/{txid} consulta a cobranca.",
+        "PATCH /me/webhook configura webhook do seller."
       ],
       pendingQuestions: [
-        "Solicitar payload completo para POST /v1/charges.",
-        "Solicitar payload completo para POST /v1/payouts.",
-        "Solicitar documentacao de webhooks.",
-        "Solicitar assinatura de webhook.",
+        "Validar em producao os eventos enviados para o webhook.",
+        "Confirmar assinatura dos eventos recebidos no webhook.",
         "Solicitar status transacionais.",
-        "Solicitar endpoints de consulta/reembolso."
+        "Solicitar endpoints de reembolso, se existirem."
       ],
       safetyNotes: [
         "Adapter real iniciado apenas no servidor.",
         "Nao expor Api-Access-Key, seller id sensivel ou secret hash no frontend.",
-        "Nao usar API Secret Hash em headers ate a Lytron confirmar o formato oficial."
+        "Nao logar Transaction-Hash, Api-Access-Key ou payloads com dados sensiveis."
       ],
       configAction: {
         label: "Configurar",

@@ -2,6 +2,7 @@ import { ArrowRight, BookOpen, ExternalLink, KeyRound, LockKeyhole } from "lucid
 import Image from "next/image";
 import Link from "next/link";
 import { GatewayDocsPanel } from "@/components/gateways/gateway-docs-panel";
+import { GatewayTestLead } from "@/components/gateways/gateway-test-lead";
 import { UmbrellaQuickstart } from "@/components/integrations/umbrella-quickstart";
 import type { GatewayCredentialField, GatewayRegistryItem } from "@/server/gateways/registry";
 
@@ -47,6 +48,7 @@ function GatewaySelectionEmptyState() {
 function GatewayConfigPanel({ gateway }: { gateway: GatewayRegistryItem }) {
   if (gateway.id === "umbrella") return <UmbrellaQuickstart />;
   const hasServerAdapter = gateway.id === "tribopay" || gateway.id === "lytronpay";
+  const supportsTestLead = gateway.id === "lytronpay";
 
   return (
     <article className="data-panel overflow-hidden">
@@ -60,30 +62,44 @@ function GatewayConfigPanel({ gateway }: { gateway: GatewayRegistryItem }) {
               <p className="section-label">Configuracao</p>
               <h2 className="mt-1 text-xl font-extrabold">{gateway.name}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                {hasServerAdapter
+                {gateway.isConfigured && supportsTestLead
+                  ? "Gateway configurado. Use o teste operacional para gerar um lead real e validar a criacao de Pix sem sair do PayFlow."
+                  : gateway.isConfigured
+                  ? "Gateway configurado no servidor. As credenciais ficam protegidas no ambiente e os testes reais aparecem quando o adapter estiver liberado."
+                  : hasServerAdapter
                   ? "Adapter server-side iniciado. Configure as credenciais no ambiente da Vercel antes de ativar chamadas reais."
                   : "Configuracao deste gateway ainda nao implementada. Adicione as credenciais conforme a documentacao oficial antes de ativar chamadas reais."}
               </p>
             </div>
           </div>
-          <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-normal text-amber-700 shadow-sm ring-1 ring-white/60">
-            Nao configurado
+          <span
+            className={
+              gateway.isConfigured
+                ? "inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-normal text-emerald-700 shadow-sm ring-1 ring-white/60"
+                : "inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-normal text-amber-700 shadow-sm ring-1 ring-white/60"
+            }
+          >
+            {gateway.isConfigured ? "Configurado" : "Nao configurado"}
           </span>
         </div>
       </div>
 
-      <div className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
-        <section className="rounded-lg border border-border/70 bg-slate-50/75 p-4 shadow-inner-line">
-          <div className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
-            <h3 className="font-bold">Credenciais previstas</h3>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {gateway.credentialFields.map((field) => (
-              <CredentialFieldPreview key={field.key} field={field} />
-            ))}
-          </div>
-        </section>
+      <div className="grid gap-4 p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div className="grid gap-4">
+          {gateway.isConfigured ? <GatewayTestLead gateway={gateway} /> : null}
+
+          <section className="rounded-lg border border-border/70 bg-slate-50/75 p-4 shadow-inner-line">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
+              <h3 className="font-bold">{gateway.isConfigured ? "Credenciais ativas no servidor" : "Credenciais previstas"}</h3>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {gateway.credentialFields.map((field) => (
+                <CredentialFieldPreview key={field.key} field={field} />
+              ))}
+            </div>
+          </section>
+        </div>
 
         <aside className="rounded-lg border border-border/70 bg-white p-4 shadow-inner-line">
           <div className="flex items-center gap-2">
