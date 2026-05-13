@@ -1,4 +1,4 @@
-import type { ParsedWhatsAppMessage, WhatsAppProvider, WhatsAppSendInput, WhatsAppSendResult, WhatsAppTemplateSendInput } from "@/providers/whatsapp/types";
+import type { ParsedWhatsAppMessage, WhatsAppMediaSendInput, WhatsAppProvider, WhatsAppSendInput, WhatsAppSendResult, WhatsAppTemplateSendInput } from "@/providers/whatsapp/types";
 
 export class MockWhatsAppProvider implements WhatsAppProvider {
   name = "mock";
@@ -8,6 +8,14 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
       providerMessageId: `mock-wa-${Date.now()}-${input.to.slice(-4)}`,
       status: "SENT",
       raw: { mock: true, to: input.to }
+    };
+  }
+
+  async sendMediaMessage(input: WhatsAppMediaSendInput): Promise<WhatsAppSendResult> {
+    return {
+      providerMessageId: `mock-wa-media-${Date.now()}-${input.to.slice(-4)}`,
+      status: "SENT",
+      raw: { mock: true, to: input.to, mediaType: input.mediaType, fileName: input.fileName }
     };
   }
 

@@ -496,7 +496,13 @@ export async function listIntegrations(workspaceId = DEFAULT_WORKSPACE_ID): Prom
   );
 }
 
-export async function appendOutboundMessage(conversationId: string, body: string, providerMessageId?: string, workspaceId = DEFAULT_WORKSPACE_ID) {
+export async function appendOutboundMessage(
+  conversationId: string,
+  body: string,
+  providerMessageId?: string,
+  workspaceId = DEFAULT_WORKSPACE_ID,
+  metadataJson?: unknown
+) {
   const safeBody = sanitizeText(body, 4000);
   return withDatabase(
     async () => {
@@ -513,7 +519,8 @@ export async function appendOutboundMessage(conversationId: string, body: string
           direction: "OUTBOUND",
           body: safeBody,
           providerMessageId,
-          status: "SENT"
+          status: "SENT",
+          metadataJson: metadataJson as never
         }
       });
 
@@ -536,7 +543,7 @@ export async function appendOutboundMessage(conversationId: string, body: string
         body: safeBody,
         status: "SENT" as const,
         providerMessageId,
-        metadataJson: undefined,
+        metadataJson,
         createdAt: nowIso()
       };
       conversation.messages.push(message);
@@ -744,7 +751,15 @@ export async function cancelRecoveryForPayment(paymentId: string, workspaceId = 
   );
 }
 
-export async function upsertPayment(payment: Omit<PaymentRecord, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: string; updatedAt?: string }, workspaceId = DEFAULT_WORKSPACE_ID) {
+export async function upsertPayment(
+  payment: Omit<PaymentRecord, "id" | "createdAt" | "updatedAt"> & {
+    id?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    rawPayloadJson?: unknown;
+  },
+  workspaceId = DEFAULT_WORKSPACE_ID
+) {
   return withDatabase(
     async () => {
       const saved = await prisma.payment.upsert({
@@ -770,7 +785,7 @@ export async function upsertPayment(payment: Omit<PaymentRecord, "id" | "created
           boletoUrl: payment.boletoUrl,
           paidAt: payment.paidAt ? new Date(payment.paidAt) : null,
           expiresAt: payment.expiresAt ? new Date(payment.expiresAt) : null,
-          rawPayloadJson: payment as never
+          rawPayloadJson: (payment.rawPayloadJson ?? payment) as never
         },
         update: {
           customerId: payment.customerId,
@@ -784,7 +799,7 @@ export async function upsertPayment(payment: Omit<PaymentRecord, "id" | "created
           boletoUrl: payment.boletoUrl,
           paidAt: payment.paidAt ? new Date(payment.paidAt) : null,
           expiresAt: payment.expiresAt ? new Date(payment.expiresAt) : null,
-          rawPayloadJson: payment as never
+          rawPayloadJson: (payment.rawPayloadJson ?? payment) as never
         },
         include: { customer: true, offer: true }
       });
@@ -806,6 +821,39 @@ export async function upsertPayment(payment: Omit<PaymentRecord, "id" | "created
       };
       demoStore.payments.unshift(record);
       return record;
+    }
+  );
+}
+
+export async function linkPaymentToConversation(
+  conversationId: string,
+  paymentId: string,
+  workspaceId = DEFAULT_WORKSPACE_ID,
+  offerId?: string | null
+) {
+  return withDatabase(
+    async () => {
+      const existing = await prisma.conversation.findFirstOrThrow({ where: { id: conversationId, workspaceId } });
+      const conversation = await prisma.conversation.update({
+        where: { id: existing.id },
+        data: {
+          linkedPaymentId: paymentId,
+          linkedOfferId: offerId === undefined ? undefined : offerId,
+          status: "PAYMENT_PENDING",
+          lastMessageAt: new Date()
+        },
+        include: { customer: true, assignedTo: true, messages: { orderBy: { createdAt: "asc" } } }
+      });
+      return mapConversation(conversation);
+    },
+    () => {
+      const conversation = demoStore.conversations.find((item) => item.id === conversationId && item.workspaceId === workspaceId);
+      if (!conversation) throw new Error("Conversa nao encontrada");
+      conversation.linkedPaymentId = paymentId;
+      if (offerId !== undefined) conversation.linkedOfferId = offerId;
+      conversation.status = "PAYMENT_PENDING";
+      conversation.lastMessageAt = nowIso();
+      return conversation;
     }
   );
 }

@@ -1,4 +1,4 @@
-const sensitiveKeys = ["token", "secret", "password", "apiKey", "authorization"];
+const sensitiveKeys = ["token", "secret", "password", "apiKey", "authorization", "x-api-key", "api-access-key", "transaction-hash"];
 
 function redact(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;

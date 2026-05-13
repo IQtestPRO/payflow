@@ -2,6 +2,7 @@ import { appUrl } from "@/lib/env";
 import { toDataURL } from "qrcode";
 import type {
   ParsedWhatsAppMessage,
+  WhatsAppMediaSendInput,
   WhatsAppProvider,
   WhatsAppSendInput,
   WhatsAppSendResult,
@@ -93,6 +94,29 @@ export class EvolutionWhatsAppProvider implements WhatsAppProvider {
 
     return {
       providerMessageId: extractEvolutionMessageId(raw) ?? `evolution-${Date.now()}`,
+      status: "SENT",
+      raw
+    };
+  }
+
+  async sendMediaMessage(input: WhatsAppMediaSendInput): Promise<WhatsAppSendResult> {
+    const media = input.mediaBase64 ?? input.mediaUrl;
+    if (!media) throw new Error("Midia ausente para envio pelo WhatsApp");
+
+    const raw = await this.request(`/message/sendMedia/${this.config.instanceName}`, {
+      method: "POST",
+      body: JSON.stringify({
+        number: normalizePhone(input.to),
+        mediatype: input.mediaType,
+        mimetype: input.mimetype ?? "image/png",
+        caption: input.caption,
+        media: stripDataUrlPrefix(media),
+        fileName: input.fileName ?? "payflow-pix-qrcode.png"
+      })
+    });
+
+    return {
+      providerMessageId: extractEvolutionMessageId(raw) ?? `evolution-media-${Date.now()}`,
       status: "SENT",
       raw
     };
@@ -310,6 +334,10 @@ function extractEvolutionError(raw: unknown) {
   const data = raw as { message?: unknown; error?: unknown; response?: { message?: unknown } } | null;
   const message = data?.message ?? data?.response?.message ?? data?.error;
   return formatEvolutionErrorMessage(message);
+}
+
+function stripDataUrlPrefix(value: string) {
+  return value.replace(/^data:[^;]+;base64,/, "");
 }
 
 function formatEvolutionErrorMessage(message: unknown): string | undefined {

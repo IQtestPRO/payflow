@@ -3,6 +3,7 @@
 import { CheckCircle2, CreditCard, Link2, RefreshCcw, Send, Tag, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
+import { InboxChargePanel } from "@/components/inbox/inbox-charge-panel";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { MessageBubble } from "@/components/inbox/message-bubble";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,6 +19,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [chargePanelOpen, setChargePanelOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -82,7 +84,10 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
       <ConversationList
         conversations={filtered}
         selectedId={selected?.id}
-        onSelect={(conversation) => setSelectedId(conversation.id)}
+        onSelect={(conversation) => {
+          setSelectedId(conversation.id);
+          setChargePanelOpen(false);
+        }}
         filter={filter}
         onFilter={setFilter}
         search={search}
@@ -102,7 +107,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
                   <p className="mt-1 text-sm text-muted-foreground">{selected.customerPhone}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button className="btn-secondary px-3" type="button">
+                  <button className={cn("btn-secondary px-3", chargePanelOpen && "border-primary/45 bg-blue-50 text-primary")} type="button" onClick={() => setChargePanelOpen((current) => !current)}>
                     <CreditCard className="h-4 w-4" aria-hidden="true" />
                     Cobrança
                   </button>
@@ -145,6 +150,39 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
                 </span>
               </div>
             </header>
+
+            <InboxChargePanel
+              conversation={selected}
+              open={chargePanelOpen}
+              onClose={() => setChargePanelOpen(false)}
+              onPaymentLinked={(paymentId) => {
+                setConversations((current) =>
+                  current.map((conversation) =>
+                    conversation.id === selected.id
+                      ? {
+                          ...conversation,
+                          status: "PAYMENT_PENDING",
+                          linkedPaymentId: paymentId
+                        }
+                      : conversation
+                  )
+                );
+              }}
+              onMessageSent={(message) => {
+                setConversations((current) =>
+                  current.map((conversation) =>
+                    conversation.id === selected.id
+                      ? {
+                          ...conversation,
+                          status: "WAITING_CUSTOMER",
+                          lastMessageAt: message.createdAt,
+                          messages: [...conversation.messages, message]
+                        }
+                      : conversation
+                  )
+                );
+              }}
+            />
 
             <div className="flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,251,255,0.86),rgba(239,246,253,0.92))] p-4">
               {selected.messages.map((message) => (
