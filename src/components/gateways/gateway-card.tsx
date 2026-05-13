@@ -9,17 +9,57 @@ const statusView: Record<GatewayRegistryItem["status"], { label: string; classNa
     label: "Configurado",
     className: "border-emerald-200 bg-emerald-50 text-emerald-700"
   },
-  pending: {
-    label: "Pendente",
+  awaiting_docs: {
+    label: "Aguardando docs",
+    className: "border-amber-200 bg-amber-50 text-amber-700"
+  },
+  pending_credentials: {
+    label: "Credenciais pendentes",
+    className: "border-blue-200 bg-blue-50 text-blue-700"
+  },
+  disabled: {
+    label: "Desativado",
     className: "border-slate-200 bg-slate-50 text-slate-700"
   }
 };
 
+const docsStatusView: Record<GatewayRegistryItem["docsStatus"], { label: string; className: string }> = {
+  ready_public_docs: {
+    label: "Docs publicas",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700"
+  },
+  partial_public_spa: {
+    label: "Docs parciais",
+    className: "border-amber-200 bg-amber-50 text-amber-700"
+  },
+  tutorial_public_reference_pending: {
+    label: "Tutorial localizado",
+    className: "border-blue-200 bg-blue-50 text-blue-700"
+  },
+  readme_reference_gated: {
+    label: "API Reference",
+    className: "border-cyan-200 bg-cyan-50 text-cyan-700"
+  },
+  public_marketing_only: {
+    label: "Docs pendentes",
+    className: "border-slate-200 bg-slate-50 text-slate-700"
+  }
+};
+
+const methodLabels: Record<string, string> = {
+  pix: "Pix",
+  credit_card: "Cartao",
+  debit_card: "Debito",
+  boleto: "Boleto",
+  bank_transfer: "Transferencia",
+  crypto: "Crypto"
+};
+
 export function GatewayCard({ gateway }: { gateway: GatewayRegistryItem }) {
   const status = statusView[gateway.status];
+  const docsStatus = docsStatusView[gateway.docsStatus];
   const Icon = gateway.icon;
   const configIsExternal = gateway.configAction.kind === "external";
-  const docsIsExternal = gateway.docsUrl?.startsWith("http");
 
   return (
     <article className="data-panel group flex min-h-[280px] flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft">
@@ -40,6 +80,15 @@ export function GatewayCard({ gateway }: { gateway: GatewayRegistryItem }) {
           </span>
         </div>
         <p className="mt-4 min-h-12 text-sm leading-6 text-muted-foreground">{gateway.description}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className={cn("rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-normal", docsStatus.className)}>{docsStatus.label}</span>
+          {gateway.methods.slice(0, 3).map((method) => (
+            <span key={method} className="rounded-md border border-border/80 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700">
+              {methodLabels[method] ?? method}
+            </span>
+          ))}
+          {!gateway.methods.length ? <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">Metodos a confirmar</span> : null}
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col justify-between bg-white/[0.92] p-5">
@@ -62,9 +111,7 @@ export function GatewayCard({ gateway }: { gateway: GatewayRegistryItem }) {
           </Link>
           <Link
             className="btn-secondary w-full"
-            href={gateway.docsUrl ?? gateway.websiteUrl}
-            target={docsIsExternal || !gateway.docsUrl ? "_blank" : undefined}
-            rel={docsIsExternal || !gateway.docsUrl ? "noreferrer" : undefined}
+            href={`#docs-${gateway.id}`}
           >
             <BookOpen className="h-4 w-4" aria-hidden="true" />
             Docs

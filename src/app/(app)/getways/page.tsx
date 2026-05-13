@@ -1,5 +1,6 @@
 import { CreditCard, ShieldCheck } from "lucide-react";
 import { GatewayCard } from "@/components/gateways/gateway-card";
+import { GatewayDocsPanel } from "@/components/gateways/gateway-docs-panel";
 import { UmbrellaQuickstart } from "@/components/integrations/umbrella-quickstart";
 import { PageHeader } from "@/components/ui/page-header";
 import { getGatewayRegistry } from "@/server/gateways/registry";
@@ -42,6 +43,23 @@ export default function GetwaysPage() {
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {gateways.map((gateway) => (
             <GatewayCard key={gateway.id} gateway={gateway} />
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="section-label">Documentacao tecnica</p>
+            <h2 className="mt-1 text-xl font-extrabold">Credenciais, capacidades e pendencias</h2>
+          </div>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            O PayFlow mostra somente dados confirmados. Onde a documentacao publica nao abre endpoints completos, a integracao fica bloqueada ate envio das docs oficiais.
+          </p>
+        </div>
+        <div className="grid gap-4">
+          {gateways.map((gateway) => (
+            <GatewayDocsPanel key={gateway.id} gateway={gateway} />
           ))}
         </div>
       </section>
