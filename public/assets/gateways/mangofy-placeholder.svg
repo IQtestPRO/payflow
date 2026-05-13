@@ -1,0 +1,8 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Identificacao visual Mangofy</title>
+  <desc id="desc">Placeholder tipografico para Mangofy.</desc>
+  <rect width="96" height="96" rx="22" fill="#FFF7ED"/>
+  <rect x="14" y="14" width="68" height="68" rx="18" fill="#EA580C"/>
+  <path d="M28 57.5V37.7H35.7L41.2 47.7L46.9 37.7H54.5V57.5H48.4V46.5L43.4 55.3H39L34.1 46.7V57.5H28Z" fill="white"/>
+  <path d="M58.6 57.5V37.7H68.1C72.8 37.7 75.8 40.3 75.8 44.3C75.8 48.3 72.8 50.9 68.1 50.9H64.9V57.5H58.6ZM64.9 45.9H67.4C68.8 45.9 69.6 45.2 69.6 44.2C69.6 43.1 68.8 42.5 67.4 42.5H64.9V45.9Z" fill="white"/>
+</svg>

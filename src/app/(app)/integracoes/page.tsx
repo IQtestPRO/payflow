@@ -1,7 +1,6 @@
 import { PayFlowMark } from "@/components/brand/payflow-logo";
 import { IntegrationCard } from "@/components/integrations/integration-card";
 import { IntegrationLogo, supportingIntegrationBrands } from "@/components/integrations/integration-brand";
-import { UmbrellaQuickstart } from "@/components/integrations/umbrella-quickstart";
 import { WhatsAppQuickstart } from "@/components/integrations/whatsapp-quickstart";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listIntegrations } from "@/server/repositories/payflow-repository";
@@ -10,8 +9,9 @@ import { getCurrentUser } from "@/server/services/auth";
 export default async function IntegrationsPage() {
   const user = await getCurrentUser();
   const integrations = await listIntegrations(user?.workspaceId);
-  const mockCount = integrations.filter((integration) => integration.status === "MOCK").length;
-  const connectedCount = integrations.filter((integration) => integration.status === "CONNECTED").length;
+  const visibleIntegrations = integrations.filter((integration) => integration.provider !== "UMBRELLA");
+  const mockCount = visibleIntegrations.filter((integration) => integration.status === "MOCK").length;
+  const connectedCount = visibleIntegrations.filter((integration) => integration.status === "CONNECTED").length;
 
   return (
     <div className="grid gap-6">
@@ -26,10 +26,10 @@ export default async function IntegrationsPage() {
               </div>
             </div>
             <p className="mt-5 max-w-3xl text-sm leading-6 text-white/75">
-              WhatsApp sustenta atendimento e recuperacao. UmbrellaPag alimenta pagamentos. UTMify e Meta fecham rastreamento, midia e atribuicao.
+              WhatsApp sustenta atendimento e recuperacao. UTMify e Meta fecham rastreamento, midia e atribuicao. Processadoras de pagamento agora ficam em Getways.
             </p>
             <div className="mt-6 grid gap-2 sm:grid-cols-4">
-              {["Canal", "Pagamento", "Tracking", "Automacao"].map((item) => (
+              {["Canal", "Tracking", "Automacao", "API"].map((item) => (
                 <div key={item} className="rounded-lg border border-white/10 bg-white/[0.07] px-3 py-2 text-sm font-semibold text-white/80">
                   {item}
                 </div>
@@ -37,7 +37,7 @@ export default async function IntegrationsPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 border-t border-white/10 bg-white/5 lg:border-l lg:border-t-0">
-            <SummaryMetric label="Conectores" value={integrations.length} />
+            <SummaryMetric label="Conectores" value={visibleIntegrations.length} />
             <SummaryMetric label="Modo mock" value={mockCount} />
             <SummaryMetric label="Conectados" value={connectedCount} />
             <div className="border-l border-t border-white/10 p-4">
@@ -52,8 +52,6 @@ export default async function IntegrationsPage() {
 
       <WhatsAppQuickstart />
 
-      <UmbrellaQuickstart />
-
       <section>
         <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
           <div>
@@ -62,7 +60,7 @@ export default async function IntegrationsPage() {
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {integrations.map((integration) => (
+          {visibleIntegrations.map((integration) => (
             <IntegrationCard key={integration.id} integration={integration} />
           ))}
         </div>

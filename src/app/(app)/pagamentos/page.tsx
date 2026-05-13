@@ -15,7 +15,7 @@ export default async function PaymentsPage() {
     <div className="grid gap-6">
       <PageHeader
         title="Pagamentos"
-        description="Transacoes recebidas via UmbrellaPag, status de checkout, Pix, boleto e links usados em recuperacao."
+        description="Transacoes recebidas via gateways, status de checkout, Pix, boleto e links usados em recuperacao."
         actions={<IntegrationLogo src={umbrella.asset} alt={umbrella.assetAlt} icon={umbrella.fallbackIcon} />}
       />
       <DataTable headers={["Cliente", "Oferta", "Valor", "Metodo", "Status", "Criado", "Provider"]}>

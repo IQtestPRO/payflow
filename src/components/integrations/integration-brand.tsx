@@ -58,8 +58,8 @@ export const integrationBrands: Record<IntegrationProvider, IntegrationBrand> = 
     accent: "text-brand-navy",
     softBg: "from-slate-900/8 via-white to-blue-500/10",
     line: "from-brand-navy to-brand-blue",
-    detailsHref: "/pagamentos",
-    primaryAction: "Ver pagamentos"
+    detailsHref: "/getways",
+    primaryAction: "Ver getway"
   },
   UTMIFY: {
     label: "UTMify",

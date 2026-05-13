@@ -1,0 +1,8 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Identificacao visual AllowPayments</title>
+  <desc id="desc">Placeholder tipografico para AllowPayments.</desc>
+  <rect width="96" height="96" rx="22" fill="#EEF2FF"/>
+  <rect x="14" y="14" width="68" height="68" rx="18" fill="#1D4ED8"/>
+  <path d="M27 66L38.8 30H47.4L59.1 66H50.8L48.9 59.5H37.1L35.2 66H27ZM39 52.7H47L43 39L39 52.7Z" fill="white"/>
+  <path d="M62.5 66V30H70.7V66H62.5Z" fill="#BFDBFE"/>
+</svg>

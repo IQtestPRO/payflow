@@ -25,6 +25,7 @@ const links = [
   { href: "/inbox", label: "Inbox WhatsApp", icon: Inbox },
   { href: "/recuperacoes", label: "Recuperações", icon: Workflow },
   { href: "/pagamentos", label: "Pagamentos", icon: CreditCard },
+  { href: "/getways", label: "Getways", icon: CreditCard },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/ofertas", label: "Ofertas", icon: Boxes },
   { href: "/produtos", label: "Produtos", icon: Package },
@@ -35,9 +36,9 @@ const links = [
 ];
 
 const navGroups = [
-  { label: "Comando", links: links.slice(0, 4) },
-  { label: "Receita", links: links.slice(4, 7) },
-  { label: "Tracking", links: links.slice(7) }
+  { label: "Comando", links: links.filter((link) => ["/dashboard", "/inbox", "/recuperacoes", "/pagamentos", "/getways"].includes(link.href)) },
+  { label: "Receita", links: links.filter((link) => ["/clientes", "/ofertas", "/produtos"].includes(link.href)) },
+  { label: "Tracking", links: links.filter((link) => ["/campanhas", "/relatorios", "/integracoes", "/configuracoes"].includes(link.href)) }
 ];
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: SessionPayload }) {
