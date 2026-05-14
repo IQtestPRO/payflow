@@ -242,15 +242,26 @@ function extractPhoneFromText(text: string) {
 }
 
 function extractAmountFromText(text: string) {
-  const matches = Array.from(text.matchAll(/(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*|\d+)(?:,\d{2}|\.\d{2})?/gi));
-  const values = matches.map((match) => parseMoneyAmount(match[0])).filter((value): value is number => Boolean(value && value >= 1));
-  const last = values.at(-1);
-  return last ? formatAmount(last) : null;
+  const labelMatch = text.match(/\b(?:valor|pre[cç]o|preco|total|pix)\s*[:=-]?\s*(?:R\$\s*)?(\d{1,6}(?:\.\d{3})*(?:,\d{2})?|\d{1,6}(?:\.\d{2})?)/i);
+  const explicitCurrencyMatch = text.match(/R\$\s*(\d{1,6}(?:\.\d{3})*(?:,\d{2})?|\d{1,6}(?:\.\d{2})?)/i);
+  const amount = parseMoneyAmount(labelMatch?.[1] ?? explicitCurrencyMatch?.[0]);
+  return amount ? formatAmount(amount) : null;
 }
 
 function extractProductFromText(text: string) {
-  const direct = text.match(/\b(?:produto|pedido|quero|interesse em|catalogo)\s*[:.-]?\s*([^\n.]{2,100})/i)?.[1];
-  return direct?.replace(/\b(?:codigo|valor|cpf|telefone)\b.*$/i, "").trim();
+  const explicit = text.match(/\b(?:produto|pedido|item|oferta|f[aá]rmaco|farmaco)\s*[:=-]\s*([^\n.]{2,120})/i)?.[1];
+  if (explicit) return cleanProductCandidate(explicit);
+
+  const interest = text.match(/\b(?:tenho interesse em|interesse em)\s+([^\n.]{2,100})/i)?.[1];
+  return cleanProductCandidate(interest);
+}
+
+function cleanProductCandidate(value?: string | null) {
+  const cleaned = cleanValue(value)
+    .replace(/\b(?:codigo|valor|cpf|telefone|tracking|catalogo|cat[aá]logo)\b.*$/i, "")
+    .trim();
+  if (!cleaned || /atendimento\s+(?:pelo\s+)?whatsapp/i.test(cleaned)) return null;
+  return cleaned;
 }
 
 function normalizeDocumentForDraft(value: string) {

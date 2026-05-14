@@ -1040,6 +1040,46 @@ export async function recordTrackingEvent(input: {
   );
 }
 
+export async function findTrackingEventByClickId(clickId?: string | null, workspaceId = DEFAULT_WORKSPACE_ID) {
+  const normalized = sanitizeText(clickId ?? "", 180);
+  if (!normalized) return null;
+
+  return withDatabase(
+    async () => {
+      const event = await prisma.trackingEvent.findFirst({
+        where: {
+          workspaceId,
+          clickId: normalized
+        },
+        orderBy: {
+          createdAt: "desc"
+        }
+      });
+
+      return event
+        ? {
+            id: event.id,
+            workspaceId: event.workspaceId,
+            customerId: event.customerId,
+            paymentId: event.paymentId,
+            offerId: event.offerId,
+            source: event.source,
+            medium: event.medium,
+            campaign: event.campaign,
+            content: event.content,
+            term: event.term,
+            fbclid: event.fbclid,
+            clickId: event.clickId,
+            eventType: event.eventType,
+            rawPayloadJson: event.rawPayloadJson,
+            createdAt: event.createdAt.toISOString()
+          }
+        : null;
+    },
+    () => demoStore.trackingEvents.find((event) => event.workspaceId === workspaceId && event.clickId === normalized) ?? null
+  );
+}
+
 export async function getReportRows(workspaceId = DEFAULT_WORKSPACE_ID): Promise<ReportRow[]> {
   const [payments, offers] = await Promise.all([listPayments(workspaceId), listOffers(workspaceId)]);
   return offers.map((offer) => {

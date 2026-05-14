@@ -10,6 +10,7 @@ import {
   findCustomer,
   findOffer,
   findPayment,
+  findTrackingEventByClickId,
   getInboxSnapshot,
   linkPaymentToConversation,
   recordTrackingEvent,
@@ -73,7 +74,7 @@ export type InboxChargeResult = {
 
 export async function getInboxChargePreview(conversationId: string, workspaceId: string): Promise<InboxChargePreview> {
   const context = await resolveConversationContext(conversationId, workspaceId);
-  const draft = buildInboxChargeDraft(context);
+  const draft = await enrichDraftFromTrackingRedirect(buildInboxChargeDraft(context), workspaceId);
 
   return {
     draft,
@@ -299,6 +300,41 @@ async function resolveConversationContext(conversationId: string, workspaceId: s
   return { conversation, customer, offer };
 }
 
+async function enrichDraftFromTrackingRedirect(draft: InboxChargeDraft, workspaceId: string): Promise<InboxChargeDraft> {
+  const clickId = cleanOptional(draft.tracking.clickId);
+  if (!clickId) return draft;
+
+  const trackingEvent = await findTrackingEventByClickId(clickId, workspaceId);
+  if (!trackingEvent) return draft;
+
+  const offer = await findOffer(trackingEvent.offerId, workspaceId);
+  const shouldUseOfferProduct = isNotFound(draft.product) && offer?.name;
+  const shouldUseOfferAmount = isNotFound(draft.amount) && typeof offer?.price === "number" && offer.price > 0;
+
+  return {
+    ...draft,
+    product: shouldUseOfferProduct ? offer.name : draft.product,
+    amount: shouldUseOfferAmount ? offer.price.toFixed(2) : draft.amount,
+    tracking: {
+      ...draft.tracking,
+      offerId: draft.tracking.offerId ?? trackingEvent.offerId ?? offer?.id ?? null,
+      offerSlug: draft.tracking.offerSlug ?? offer?.slug ?? null,
+      source: draft.tracking.source ?? trackingEvent.source ?? null,
+      medium: draft.tracking.medium ?? trackingEvent.medium ?? null,
+      campaign: draft.tracking.campaign ?? trackingEvent.campaign ?? null,
+      content: draft.tracking.content ?? trackingEvent.content ?? null,
+      term: draft.tracking.term ?? trackingEvent.term ?? null,
+      fbclid: draft.tracking.fbclid ?? trackingEvent.fbclid ?? null,
+      clickId
+    },
+    fieldState: {
+      ...draft.fieldState,
+      ...(shouldUseOfferProduct ? { product: { found: true, source: "offer" as const } } : {}),
+      ...(shouldUseOfferAmount ? { amount: { found: true, source: "offer" as const } } : {})
+    }
+  };
+}
+
 function normalizeInboxGateway(value: string): InboxChargeGatewayId | null {
   return inboxChargeGatewayIds.includes(value as InboxChargeGatewayId) ? (value as InboxChargeGatewayId) : null;
 }
@@ -490,7 +526,7 @@ function buildSendTemplates(input: {
 }
 
 function buildPixMessage(payment: PaymentRecord) {
-  return `Pix copia e cola - ${payment.offerName ?? "cobranca PayFlow"}\nValor: ${formatCurrency(payment.amount)}\n\n${payment.pixCode}`;
+  return payment.pixCode ?? "";
 }
 
 function mapProviderStatus(value: string | null) {

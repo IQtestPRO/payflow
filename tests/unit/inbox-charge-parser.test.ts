@@ -44,6 +44,31 @@ describe("inbox charge parser", () => {
     expect(draft.fieldState.product.source).toBe("fallback");
   });
 
+  it("prefers explicit product and amount labels over generic WhatsApp intent text", () => {
+    const draft = buildInboxChargeDraft({
+      conversation: conversationRecord([
+        [
+          "Ola, vim do anuncio da MusclePrime Brasil e quero atendimento pelo WhatsApp.",
+          "",
+          "Produto: MusclePrime Brasil",
+          "Valor: 9,90",
+          "Tracking: utm_source=meta&utm_medium=cpc&utm_campaign=muscleprime_x1_realtest&pf_click_id=PF-MPBR-REAL001"
+        ].join("\n")
+      ]),
+      customer: null,
+      offer: null
+    });
+
+    expect(draft.product).toBe("MusclePrime Brasil");
+    expect(draft.amount).toBe("9.90");
+    expect(draft.tracking).toMatchObject({
+      source: "meta",
+      medium: "cpc",
+      campaign: "muscleprime_x1_realtest",
+      clickId: "PF-MPBR-REAL001"
+    });
+  });
+
   it("parses Brazilian currency values safely", () => {
     expect(parseMoneyAmount("R$ 1.234,56")).toBe(1234.56);
     expect(parseMoneyAmount("297,00")).toBe(297);
