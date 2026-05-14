@@ -7,9 +7,9 @@ export interface RecoveryQueue {
   retryFailed(paymentId: string): Promise<void>;
 }
 
-export class MockRecoveryQueue implements RecoveryQueue {
+export class LocalRecoveryQueue implements RecoveryQueue {
   async enqueueAttempt(attempt: RecoveryAttemptRecord) {
-    logger.info("Mock recovery attempt scheduled", {
+    logger.info("Local recovery attempt scheduled", {
       attemptId: attempt.id,
       paymentId: attempt.paymentId,
       scheduledAt: attempt.scheduledAt
@@ -17,15 +17,15 @@ export class MockRecoveryQueue implements RecoveryQueue {
   }
 
   async cancelPayment(paymentId: string) {
-    logger.info("Mock recovery queue cancelled", { paymentId });
+    logger.info("Local recovery queue cancelled", { paymentId });
   }
 
   async retryFailed(paymentId: string) {
-    logger.info("Mock recovery retry requested", { paymentId });
+    logger.info("Local recovery retry requested", { paymentId });
   }
 }
 
 export function getRecoveryQueue(): RecoveryQueue {
   // TODO: retornar BullMQRecoveryQueue quando REDIS_URL estiver configurado.
-  return new MockRecoveryQueue();
+  return new LocalRecoveryQueue();
 }

@@ -26,7 +26,7 @@ import {
   type InboxChargeDraft,
   type InboxChargeTrackingDraft
 } from "@/server/services/inbox-charge-parser";
-import { sendConversationMediaMessage, sendConversationMessage } from "@/server/services/messaging";
+import { sendConversationMediaMessage, sendConversationMessage, type MessageActor } from "@/server/services/messaging";
 import { syncPaymentToUtmify } from "@/server/services/utmify-orders";
 
 export const inboxChargeGatewayIds = ["umbrella", "mangofy", "sigilopay", "lytronpay", "allowpayments"] as const;
@@ -219,7 +219,7 @@ export async function sendInboxChargeArtifact(input: {
   conversationId: string;
   paymentId: string;
   artifact: "qr_code" | "pix_copy_paste";
-}, workspaceId: string) {
+}, workspaceId: string, actor?: MessageActor) {
   const conversations = await getInboxSnapshot(workspaceId);
   const conversation = conversations.find((item) => item.id === input.conversationId);
   if (!conversation) throw new Error("Conversa nao encontrada");
@@ -232,7 +232,7 @@ export async function sendInboxChargeArtifact(input: {
 
   if (input.artifact === "pix_copy_paste") {
     return {
-      ...(await sendConversationMessage(input.conversationId, buildPixMessage(payment), workspaceId)),
+      ...(await sendConversationMessage(input.conversationId, buildPixMessage(payment), workspaceId, actor)),
       sentAs: "text" as const
     };
   }
@@ -251,7 +251,7 @@ export async function sendInboxChargeArtifact(input: {
           providerPaymentId: payment.providerPaymentId,
           artifact: input.artifact
         }
-      }, workspaceId)),
+      }, workspaceId, actor)),
       sentAs: "media" as const
     };
   } catch {
@@ -259,7 +259,8 @@ export async function sendInboxChargeArtifact(input: {
       ...(await sendConversationMessage(
         input.conversationId,
         `${caption}\n\nNao consegui enviar a imagem do QR automaticamente por este provider. Use o Pix copia e cola que enviarei em separado.`,
-        workspaceId
+        workspaceId,
+        actor
       )),
       sentAs: "text" as const
     };

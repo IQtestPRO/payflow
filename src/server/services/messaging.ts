@@ -9,7 +9,12 @@ type ConversationMediaMessageInput = {
   metadata?: Record<string, unknown>;
 };
 
-export async function sendConversationMessage(conversationId: string, body: string, workspaceId?: string) {
+export type MessageActor = {
+  id: string;
+  name: string;
+};
+
+export async function sendConversationMessage(conversationId: string, body: string, workspaceId?: string, actor?: MessageActor) {
   const conversations = await getInboxSnapshot(workspaceId);
   const conversation = conversations.find((item) => item.id === conversationId);
   if (!conversation) throw new Error("Conversa não encontrada");
@@ -21,12 +26,12 @@ export async function sendConversationMessage(conversationId: string, body: stri
   const safeBody = sanitizeText(body, 4000);
   const provider = getWhatsAppProvider();
   const result = await provider.sendMessage({ to: customer.phone, body: safeBody, metadata: { conversationId } });
-  const message = await appendOutboundMessage(conversation.id, safeBody, result.providerMessageId, conversation.workspaceId);
+  const message = await appendOutboundMessage(conversation.id, safeBody, result.providerMessageId, conversation.workspaceId, actor ? { attendant: actor } : undefined);
 
   return { message, providerMessageId: result.providerMessageId };
 }
 
-export async function sendConversationMediaMessage(conversationId: string, input: ConversationMediaMessageInput, workspaceId?: string) {
+export async function sendConversationMediaMessage(conversationId: string, input: ConversationMediaMessageInput, workspaceId?: string, actor?: MessageActor) {
   const conversations = await getInboxSnapshot(workspaceId);
   const conversation = conversations.find((item) => item.id === conversationId);
   if (!conversation) throw new Error("Conversa nao encontrada");
@@ -50,6 +55,7 @@ export async function sendConversationMediaMessage(conversationId: string, input
   });
   const message = await appendOutboundMessage(conversation.id, safeCaption || "[QR Code Pix]", result.providerMessageId, conversation.workspaceId, {
     ...input.metadata,
+    ...(actor ? { attendant: actor } : {}),
     mediaType: "image",
     fileName: input.fileName ?? "payflow-pix-qrcode.png"
   });

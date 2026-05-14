@@ -6,7 +6,7 @@ export async function GET() {
   const auth = await requireApiUser();
   if (auth.response) return auth.response;
 
-  const provider = process.env.WHATSAPP_PROVIDER || "mock";
+  const provider = process.env.WHATSAPP_PROVIDER || "evolution";
   const hasAccessToken = Boolean(process.env.WHATSAPP_ACCESS_TOKEN);
   const hasPhoneNumberId = Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID);
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "payflow-whatsapp-local";

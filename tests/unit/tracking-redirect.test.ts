@@ -35,6 +35,6 @@ describe("tracking redirect helpers", () => {
     expect(message).toContain("X1");
     expect(message).toContain("PF-X1-8K2Q");
     expect(url).toContain("https://wa.me/5519999994568");
-    expect(new URL(url).searchParams.get("text")).toContain("Codigo PF-X1-8K2Q");
+    expect(new URL(url).searchParams.get("text")).toContain("Ref: PF-X1-8K2Q");
   });
 });

@@ -29,22 +29,27 @@ export function AuthForm({ mode }: { mode: Mode }) {
             password: String(formData.get("password") ?? "")
           };
 
-    const response = await fetch(`/api/auth/${mode}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    try {
+      const response = await fetch(`/api/auth/${mode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-    const json = (await response.json()) as { error?: string; redirectTo?: string };
-    setLoading(false);
+      const json = (await response.json().catch(() => ({}))) as { error?: string; redirectTo?: string };
+      setLoading(false);
 
-    if (!response.ok) {
-      setError(json.error ?? "Nao foi possivel continuar.");
-      return;
+      if (!response.ok) {
+        setError(json.error ?? "Nao foi possivel continuar.");
+        return;
+      }
+
+      router.push(json.redirectTo ?? "/dashboard");
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError("Nao foi possivel conectar ao PayFlow agora.");
     }
-
-    router.push(json.redirectTo ?? "/dashboard");
-    router.refresh();
   }
 
   return (
@@ -57,7 +62,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </div>
         <h1 className="mt-3 text-2xl font-extrabold">{mode === "login" ? "Entrar no PayFlow" : "Criar workspace"}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          {mode === "login" ? "Use o usuario seed para validar o ambiente e configurar as integracoes." : "Crie o primeiro usuario owner da sua empresa."}
+          {mode === "login" ? "Acesse com seu usuario operacional para responder conversas e acompanhar pagamentos reais." : "Crie o primeiro usuario owner da sua empresa."}
         </p>
       </div>
 
@@ -77,11 +82,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
         <label className="grid gap-2 text-sm font-semibold">
           E-mail
-          <input className="field" name="email" type="email" autoComplete="email" defaultValue={mode === "login" ? "admin@payflow.local" : ""} required />
+          <input className="field" name="email" type="email" autoComplete="email" required />
         </label>
         <label className="grid gap-2 text-sm font-semibold">
           Senha
-          <input className="field" name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} defaultValue={mode === "login" ? "admin123" : ""} required />
+          <input className="field" name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required />
         </label>
 
         {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}

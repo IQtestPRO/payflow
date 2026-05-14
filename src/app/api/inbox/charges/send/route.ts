@@ -18,7 +18,10 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Informe a cobranca e o item a enviar." }, { status: 422 });
 
   try {
-    const result = await sendInboxChargeArtifact(parsed.data, auth.user.workspaceId);
+    const result = await sendInboxChargeArtifact(parsed.data, auth.user.workspaceId, {
+      id: auth.user.sub,
+      name: auth.user.name
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Falha ao enviar cobranca." }, { status: 422 });

@@ -13,7 +13,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await sendConversationMessage(parsed.data.conversationId, parsed.data.body, auth.user.workspaceId);
+    const result = await sendConversationMessage(parsed.data.conversationId, parsed.data.body, auth.user.workspaceId, {
+      id: auth.user.sub,
+      name: auth.user.name
+    });
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Falha ao enviar mensagem" }, { status: 400 });

@@ -38,6 +38,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
 
   const selected = conversations.find((conversation) => conversation.id === selectedId) ?? filtered[0];
   const priority = selected ? priorityForStatus(selected.status) : null;
+  const activeAttendant = selected ? selected.assignedToName ?? readLastAttendantName(selected.messages) : null;
 
   async function send(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
@@ -133,7 +134,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
                 </div>
                 <div className="rounded-md border border-border/80 bg-slate-50/80 px-3 py-2">
                   <p className="text-[11px] font-bold uppercase tracking-normal text-muted-foreground">Atendente</p>
-                  <p className="mt-1 truncate text-sm font-extrabold text-foreground">{selected.assignedToName ?? "Sem atendente"}</p>
+                  <p className="mt-1 truncate text-sm font-extrabold text-foreground">{activeAttendant ?? "Sem atendente"}</p>
                 </div>
               </div>
 
@@ -146,7 +147,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
                 ))}
                 <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                   <UserRound className="h-3 w-3" aria-hidden="true" />
-                  {selected.assignedToName ?? "Sem atendente"}
+                  {activeAttendant ?? "Sem atendente"}
                 </span>
               </div>
             </header>
@@ -203,12 +204,25 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">
-            <EmptyState title="Nenhuma conversa encontrada" description="Quando uma mensagem chegar pelo WhatsApp, ela aparece aqui com status, histórico e opção de resposta." framed={false} />
+            <EmptyState title="Nenhuma conversa real recebida ainda" description="Quando uma mensagem chegar pelo WhatsApp conectado, ela aparece aqui com status, historico e opcao de resposta." framed={false} />
           </div>
         )}
       </section>
     </div>
   );
+}
+
+function readLastAttendantName(messages: MessageRecord[]) {
+  for (const message of [...messages].reverse()) {
+    if (message.direction !== "OUTBOUND") continue;
+    const metadata = message.metadataJson;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) continue;
+    const attendant = (metadata as Record<string, unknown>).attendant;
+    if (!attendant || typeof attendant !== "object" || Array.isArray(attendant)) continue;
+    const name = (attendant as Record<string, unknown>).name;
+    if (typeof name === "string" && name.trim()) return name.trim();
+  }
+  return null;
 }
 
 function priorityForStatus(status: ConversationStatus) {
