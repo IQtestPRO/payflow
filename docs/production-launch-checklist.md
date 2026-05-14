@@ -29,16 +29,13 @@ Depois de configurar a `DATABASE_URL`, aplique as migrations:
 npm run db:deploy
 ```
 
-Para criar o usuario demo inicial, rode o seed uma vez:
+Para criar os acessos reais iniciais, configure `PAYFLOW_LUCAS_*` e `PAYFLOW_ARTHUR_*` nas variaveis de ambiente e rode o seed uma vez:
 
 ```bash
 npm run db:seed
 ```
 
-Login seed:
-
-- E-mail: `admin@payflow.local`
-- Senha: `admin123`
+O seed nao cria campanhas, clientes, pagamentos, ofertas ou conversas ficticias.
 
 ## 3. Variaveis de ambiente da Vercel
 
@@ -113,7 +110,7 @@ https://pay-flow.shop/api/health
 
 - `/api/health` responde `ok: true`.
 - `/login` abre.
-- Login seed funciona.
+- Login Lucas/Arthur funciona.
 - `/dashboard` abre sem erro.
 - `/integracoes` mostra `provider: evolution`.
 - QR code conecta o numero.

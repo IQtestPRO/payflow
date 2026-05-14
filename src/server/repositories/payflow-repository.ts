@@ -1,4 +1,4 @@
-import { demoStore, DEMO_WORKSPACE_ID } from "@/lib/demo-data";
+import { FALLBACK_WORKSPACE_ID, runtimeStore } from "@/lib/runtime-store";
 import { hasDatabaseUrl } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -21,7 +21,7 @@ import type {
 } from "@/lib/types";
 import { nowIso, sanitizeText, slugify } from "@/lib/utils";
 
-export const DEFAULT_WORKSPACE_ID = DEMO_WORKSPACE_ID;
+export const DEFAULT_WORKSPACE_ID = FALLBACK_WORKSPACE_ID;
 
 type MaybePromise<T> = Promise<T> | T;
 
@@ -31,7 +31,11 @@ async function withDatabase<T>(operation: () => MaybePromise<T>, fallback: () =>
   try {
     return await operation();
   } catch (error) {
-    logger.warn("Database unavailable, falling back to demo store", {
+    if (process.env.NODE_ENV === "production") {
+      throw error;
+    }
+
+    logger.warn("Database unavailable, using local runtime store", {
       error: error instanceof Error ? error.message : String(error)
     });
     return fallback();
@@ -64,13 +68,13 @@ function computeMetrics(
   );
   const abandoned = payments.filter((payment) => ["FAILED", "EXPIRED", "CANCELLED"].includes(payment.status));
   const revenue = paid.reduce((total, payment) => total + payment.amount, 0);
-  const recovered = attempts.filter((attempt) => attempt.status === "CONVERTED").length + offers.reduce((sum, offer) => sum + offer.recoveries, 0);
+  const recovered = attempts.filter((attempt) => attempt.status === "CONVERTED").length;
   const spend = campaigns.reduce((total, campaign) => total + campaign.spend, 0);
   const averageTicket = paid.length ? revenue / paid.length : 0;
   const recoveryRate = abandoned.length ? (recovered / abandoned.length) * 100 : 0;
 
   return [
-    { label: "Receita total", value: currency(revenue), delta: "+12,4%", tone: "success" },
+    { label: "Receita total", value: currency(revenue), delta: paid.length ? `${paid.length} pagamentos` : "sem vendas reais", tone: paid.length ? "success" : undefined },
     { label: "Vendas aprovadas", value: String(paid.length), delta: `${paid.length} pagas`, tone: "success" },
     { label: "Pagamentos pendentes", value: String(pending.length), tone: "warning" },
     { label: "Pagamentos abandonados", value: String(abandoned.length), tone: "danger" },
@@ -121,7 +125,16 @@ export async function getWorkspaceId() {
   return withDatabase(
     async () => {
       const workspace = await prisma.workspace.findFirst({ select: { id: true } });
-      return workspace?.id ?? DEFAULT_WORKSPACE_ID;
+      if (workspace?.id) return workspace.id;
+
+      const created = await prisma.workspace.create({
+        data: {
+          name: "PayFlow",
+          slug: "payflow"
+        },
+        select: { id: true }
+      });
+      return created.id;
     },
     () => DEFAULT_WORKSPACE_ID
   );
@@ -132,7 +145,7 @@ export async function getDashboardSnapshot(workspaceId = DEFAULT_WORKSPACE_ID): 
     async () => {
       const [payments, conversations, campaigns, offers, attempts] = await Promise.all([
         prisma.payment.findMany({
-          where: { workspaceId },
+          where: { workspaceId, provider: { not: "MOCK" } },
           include: { customer: true, offer: true },
           orderBy: { createdAt: "desc" }
         }),
@@ -141,7 +154,7 @@ export async function getDashboardSnapshot(workspaceId = DEFAULT_WORKSPACE_ID): 
           include: { customer: true, assignedTo: true, messages: { orderBy: { createdAt: "asc" } } },
           orderBy: { lastMessageAt: "desc" }
         }),
-        prisma.campaign.findMany({ where: { workspaceId }, orderBy: { roas: "desc" } }),
+        prisma.campaign.findMany({ where: { workspaceId, provider: { not: "MOCK" } }, orderBy: { roas: "desc" } }),
         prisma.offer.findMany({ where: { workspaceId }, include: { product: true }, orderBy: { abandonments: "desc" } }),
         prisma.recoveryAttempt.findMany({ where: { workspaceId } })
       ]);
@@ -156,11 +169,11 @@ export async function getDashboardSnapshot(workspaceId = DEFAULT_WORKSPACE_ID): 
     },
     () =>
       buildDashboardSnapshot(
-        demoStore.payments,
-        demoStore.conversations,
-        demoStore.campaigns,
-        demoStore.offers,
-        demoStore.recoveryAttempts
+        runtimeStore.payments.filter((payment) => payment.provider !== "MOCK"),
+        runtimeStore.conversations,
+        runtimeStore.campaigns.filter((campaign) => campaign.provider !== "MOCK"),
+        runtimeStore.offers,
+        runtimeStore.recoveryAttempts
       )
   );
 
@@ -174,13 +187,14 @@ function buildDashboardSnapshot(
   offers: OfferRecord[],
   attempts: RecoveryAttemptRecord[]
 ): DashboardSnapshot {
+  const offerScope = offers.filter(isMusclePrimeOffer);
   return {
     metrics: computeMetrics(payments, conversations, campaigns, offers, attempts),
     revenueByDay: revenueByDay(payments),
     paymentsByStatus: countBy(payments.map((payment) => payment.status)) as DashboardSnapshot["paymentsByStatus"],
     conversationsByStatus: countBy(conversations.map((conversation) => conversation.status)) as DashboardSnapshot["conversationsByStatus"],
     topCampaigns: [...campaigns].sort((a, b) => b.roas - a.roas).slice(0, 5),
-    offersByAbandonment: [...offers].sort((a, b) => b.abandonments - a.abandonments).slice(0, 5)
+    offersByAbandonment: [...offerScope].sort((a, b) => b.abandonments - a.abandonments).slice(0, 5)
   };
 }
 
@@ -198,14 +212,14 @@ export async function getInboxSnapshot(workspaceId = DEFAULT_WORKSPACE_ID): Prom
       });
       return conversations.map(mapConversation);
     },
-    () => demoStore.conversations
+    () => runtimeStore.conversations
   );
 }
 
 export async function listProducts(workspaceId = DEFAULT_WORKSPACE_ID): Promise<ProductRecord[]> {
   return withDatabase(
     async () => (await prisma.product.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" } })).map(mapProduct),
-    () => demoStore.products
+    () => runtimeStore.products
   );
 }
 
@@ -237,7 +251,7 @@ export async function createProduct(input: Pick<ProductRecord, "name" | "descrip
         })
       ),
     () => {
-      demoStore.products.unshift(product);
+      runtimeStore.products.unshift(product);
       return product;
     }
   );
@@ -259,7 +273,7 @@ export async function updateProduct(id: string, input: Partial<Pick<ProductRecor
         })
       ),
     () => {
-      const product = demoStore.products.find((item) => item.id === id && item.workspaceId === workspaceId);
+      const product = runtimeStore.products.find((item) => item.id === id && item.workspaceId === workspaceId);
       if (!product) throw new Error("Produto não encontrado");
       Object.assign(product, {
         ...input,
@@ -285,7 +299,7 @@ export async function listOffers(workspaceId = DEFAULT_WORKSPACE_ID): Promise<Of
           orderBy: { createdAt: "desc" }
         })
       ).map(mapOffer),
-    () => demoStore.offers
+    () => runtimeStore.offers
   );
 }
 
@@ -306,7 +320,7 @@ export async function createOffer(
   >,
   workspaceId = DEFAULT_WORKSPACE_ID
 ) {
-  const product = demoStore.products.find((item) => item.id === input.productId);
+  const product = runtimeStore.products.find((item) => item.id === input.productId);
   const offer: OfferRecord = {
     id: `offer-${Date.now()}`,
     workspaceId,
@@ -357,7 +371,7 @@ export async function createOffer(
         })
       ),
     () => {
-      demoStore.offers.unshift(offer);
+      runtimeStore.offers.unshift(offer);
       return offer;
     }
   );
@@ -388,14 +402,14 @@ export async function updateOffer(id: string, input: Partial<OfferRecord>, works
         })
       ),
     () => {
-      const offer = demoStore.offers.find((item) => item.id === id && item.workspaceId === workspaceId);
+      const offer = runtimeStore.offers.find((item) => item.id === id && item.workspaceId === workspaceId);
       if (!offer) throw new Error("Oferta não encontrada");
       Object.assign(offer, input, {
         name: input.name ? sanitizeText(input.name, 160) : offer.name,
         slug: input.name ? slugify(input.name) : offer.slug,
         updatedAt: nowIso()
       });
-      offer.productName = demoStore.products.find((item) => item.id === offer.productId)?.name ?? null;
+      offer.productName = runtimeStore.products.find((item) => item.id === offer.productId)?.name ?? null;
       return offer;
     }
   );
@@ -408,7 +422,7 @@ export async function archiveOffer(id: string, workspaceId = DEFAULT_WORKSPACE_I
 export async function listCustomers(workspaceId = DEFAULT_WORKSPACE_ID): Promise<CustomerRecord[]> {
   return withDatabase(
     async () => (await prisma.customer.findMany({ where: { workspaceId }, orderBy: { updatedAt: "desc" } })).map(mapCustomer),
-    () => demoStore.customers
+    () => runtimeStore.customers
   );
 }
 
@@ -425,7 +439,7 @@ export async function anonymizeCustomer(id: string, workspaceId = DEFAULT_WORKSP
   return withDatabase(
     async () => mapCustomer(await prisma.customer.update({ where: { id }, data: anonymized })),
     () => {
-      const customer = demoStore.customers.find((item) => item.id === id && item.workspaceId === workspaceId);
+      const customer = runtimeStore.customers.find((item) => item.id === id && item.workspaceId === workspaceId);
       if (!customer) throw new Error("Cliente não encontrado");
       Object.assign(customer, anonymized, { updatedAt: nowIso() });
       return customer;
@@ -438,19 +452,19 @@ export async function listPayments(workspaceId = DEFAULT_WORKSPACE_ID): Promise<
     async () =>
       (
         await prisma.payment.findMany({
-          where: { workspaceId },
+          where: { workspaceId, provider: { not: "MOCK" } },
           include: { customer: true, offer: true },
           orderBy: { createdAt: "desc" }
         })
       ).map(mapPayment),
-    () => demoStore.payments
+    () => runtimeStore.payments.filter((payment) => payment.provider !== "MOCK")
   );
 }
 
 export async function listRecoveryFlows(workspaceId = DEFAULT_WORKSPACE_ID): Promise<RecoveryFlowRecord[]> {
   return withDatabase(
     async () => (await prisma.recoveryFlow.findMany({ where: { workspaceId, status: "ACTIVE" } })).map(mapRecoveryFlow),
-    () => demoStore.recoveryFlows.filter((flow) => flow.status === "ACTIVE")
+    () => runtimeStore.recoveryFlows.filter((flow) => flow.status === "ACTIVE")
   );
 }
 
@@ -464,14 +478,14 @@ export async function listRecoveryAttempts(workspaceId = DEFAULT_WORKSPACE_ID): 
           orderBy: { scheduledAt: "asc" }
         })
       ).map(mapRecoveryAttempt),
-    () => demoStore.recoveryAttempts
+    () => runtimeStore.recoveryAttempts
   );
 }
 
 export async function listCampaigns(workspaceId = DEFAULT_WORKSPACE_ID): Promise<CampaignRecord[]> {
   return withDatabase(
-    async () => (await prisma.campaign.findMany({ where: { workspaceId }, orderBy: { roas: "desc" } })).map(mapCampaign),
-    () => demoStore.campaigns
+    async () => (await prisma.campaign.findMany({ where: { workspaceId, provider: { not: "MOCK" } }, orderBy: { roas: "desc" } })).map(mapCampaign),
+    () => runtimeStore.campaigns.filter((campaign) => campaign.provider !== "MOCK")
   );
 }
 
@@ -487,12 +501,12 @@ export async function listIntegrations(workspaceId = DEFAULT_WORKSPACE_ID): Prom
         id: item.id,
         workspaceId: item.workspaceId,
         provider: item.provider as IntegrationProvider,
-        status: item.status,
+        status: item.status === "MOCK" ? "DISCONNECTED" : item.status,
         lastSyncAt: asIso(item.lastSyncAt),
         errorMessage: item.errorMessage,
-        logs: item.errorMessage ? [item.errorMessage] : ["Conta configurada no banco"]
+        logs: item.errorMessage ? [item.errorMessage] : ["Conta registrada no banco"]
       })),
-    () => demoStore.integrations
+    () => runtimeStore.integrations.map((integration) => ({ ...integration, status: integration.status === "MOCK" ? "DISCONNECTED" : integration.status }))
   );
 }
 
@@ -504,6 +518,7 @@ export async function appendOutboundMessage(
   metadataJson?: unknown
 ) {
   const safeBody = sanitizeText(body, 4000);
+  const attendant = readAttendantMetadata(metadataJson);
   return withDatabase(
     async () => {
       const conversation = await prisma.conversation.findFirstOrThrow({
@@ -526,13 +541,17 @@ export async function appendOutboundMessage(
 
       await prisma.conversation.update({
         where: { id: conversationId },
-        data: { status: "WAITING_CUSTOMER", lastMessageAt: message.createdAt }
+        data: {
+          status: "WAITING_CUSTOMER",
+          lastMessageAt: message.createdAt,
+          ...(attendant?.id ? { assignedToId: attendant.id } : {})
+        }
       });
 
       return mapMessage(message);
     },
     () => {
-      const conversation = demoStore.conversations.find((item) => item.id === conversationId && item.workspaceId === workspaceId);
+      const conversation = runtimeStore.conversations.find((item) => item.id === conversationId && item.workspaceId === workspaceId);
       if (!conversation) throw new Error("Conversa não encontrada");
       const message = {
         id: `msg-${Date.now()}`,
@@ -549,6 +568,7 @@ export async function appendOutboundMessage(
       conversation.messages.push(message);
       conversation.status = "WAITING_CUSTOMER";
       conversation.lastMessageAt = message.createdAt;
+      conversation.assignedToName = attendant?.name ?? conversation.assignedToName;
       return message;
     }
   );
@@ -622,7 +642,7 @@ export async function registerInboundWhatsAppMessage(input: {
       return { customerId: customer.id, conversationId: conversation.id, messageId: message.id };
     },
     () => {
-      let customer = demoStore.customers.find((item) => item.workspaceId === workspaceId && item.phone === phone);
+      let customer = runtimeStore.customers.find((item) => item.workspaceId === workspaceId && item.phone === phone);
       if (!customer) {
         customer = {
           id: `cust-${Date.now()}`,
@@ -641,10 +661,10 @@ export async function registerInboundWhatsAppMessage(input: {
           createdAt: nowIso(),
           updatedAt: nowIso()
         };
-        demoStore.customers.unshift(customer);
+        runtimeStore.customers.unshift(customer);
       }
 
-      let conversation = demoStore.conversations.find(
+      let conversation = runtimeStore.conversations.find(
         (item) => item.workspaceId === workspaceId && item.customerId === customer?.id && item.status !== "RESOLVED"
       );
       if (!conversation) {
@@ -660,7 +680,7 @@ export async function registerInboundWhatsAppMessage(input: {
           lastMessageAt: nowIso(),
           messages: []
         };
-        demoStore.conversations.unshift(conversation);
+        runtimeStore.conversations.unshift(conversation);
       }
 
       const message = {
@@ -702,7 +722,7 @@ export async function createRecoveryAttempts(attempts: RecoveryAttemptRecord[], 
       return attempts;
     },
     () => {
-      demoStore.recoveryAttempts.push(...attempts);
+      runtimeStore.recoveryAttempts.push(...attempts);
       return attempts;
     }
   );
@@ -725,7 +745,7 @@ export async function updateRecoveryAttempt(id: string, input: Partial<RecoveryA
         })
       ),
     () => {
-      const attempt = demoStore.recoveryAttempts.find((item) => item.id === id && item.workspaceId === workspaceId);
+      const attempt = runtimeStore.recoveryAttempts.find((item) => item.id === id && item.workspaceId === workspaceId);
       if (!attempt) throw new Error("Tentativa não encontrada");
       Object.assign(attempt, input);
       return attempt;
@@ -742,7 +762,7 @@ export async function cancelRecoveryForPayment(paymentId: string, workspaceId = 
       });
     },
     () => {
-      demoStore.recoveryAttempts.forEach((attempt) => {
+      runtimeStore.recoveryAttempts.forEach((attempt) => {
         if (attempt.paymentId === paymentId && attempt.workspaceId === workspaceId && attempt.status === "SCHEDULED") {
           attempt.status = "CANCELLED";
         }
@@ -807,7 +827,7 @@ export async function upsertPayment(
       return mapPayment(saved);
     },
     () => {
-      const existing = demoStore.payments.find((item) => item.provider === payment.provider && item.providerPaymentId === payment.providerPaymentId);
+      const existing = runtimeStore.payments.find((item) => item.provider === payment.provider && item.providerPaymentId === payment.providerPaymentId);
       if (existing) {
         Object.assign(existing, payment, { updatedAt: nowIso() });
         return existing;
@@ -819,7 +839,7 @@ export async function upsertPayment(
         createdAt: payment.createdAt ?? nowIso(),
         updatedAt: payment.updatedAt ?? nowIso()
       };
-      demoStore.payments.unshift(record);
+      runtimeStore.payments.unshift(record);
       return record;
     }
   );
@@ -847,7 +867,7 @@ export async function linkPaymentToConversation(
       return mapConversation(conversation);
     },
     () => {
-      const conversation = demoStore.conversations.find((item) => item.id === conversationId && item.workspaceId === workspaceId);
+      const conversation = runtimeStore.conversations.find((item) => item.id === conversationId && item.workspaceId === workspaceId);
       if (!conversation) throw new Error("Conversa nao encontrada");
       conversation.linkedPaymentId = paymentId;
       if (offerId !== undefined) conversation.linkedOfferId = offerId;
@@ -867,7 +887,7 @@ export async function findCustomerByPhone(phone?: string | null, workspaceId = D
       const customer = await prisma.customer.findFirst({ where: { workspaceId, phone: normalized } });
       return customer ? mapCustomer(customer) : null;
     },
-    () => demoStore.customers.find((customer) => customer.phone === normalized && customer.workspaceId === workspaceId) ?? null
+    () => runtimeStore.customers.find((customer) => customer.phone === normalized && customer.workspaceId === workspaceId) ?? null
   );
 }
 
@@ -893,7 +913,7 @@ export async function createOrUpdateCustomer(
       return mapCustomer(customer);
     },
     () => {
-      let customer = phone ? demoStore.customers.find((item) => item.workspaceId === workspaceId && item.phone === phone) : null;
+      let customer = phone ? runtimeStore.customers.find((item) => item.workspaceId === workspaceId && item.phone === phone) : null;
       if (!customer) {
         customer = {
           id: `cust-${Date.now()}`,
@@ -912,7 +932,7 @@ export async function createOrUpdateCustomer(
           createdAt: nowIso(),
           updatedAt: nowIso()
         };
-        demoStore.customers.unshift(customer);
+        runtimeStore.customers.unshift(customer);
       } else {
         Object.assign(customer, input, { phone, updatedAt: nowIso() });
       }
@@ -931,7 +951,7 @@ export async function recordWebhookEvent(input: {
 }) {
   const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
   const dedupeKey = `${workspaceId}:${input.provider}:${input.eventType}:${input.externalId ?? ""}`;
-  if (input.externalId && demoStore.webhookExternalIds.has(dedupeKey)) {
+  if (input.externalId && runtimeStore.webhookExternalIds.has(dedupeKey)) {
     return { duplicated: true };
   }
 
@@ -976,7 +996,7 @@ export async function recordWebhookEvent(input: {
       return { duplicated: false };
     },
     () => {
-      if (input.externalId) demoStore.webhookExternalIds.add(dedupeKey);
+      if (input.externalId) runtimeStore.webhookExternalIds.add(dedupeKey);
       return { duplicated: false };
     }
   );
@@ -1019,7 +1039,7 @@ export async function recordTrackingEvent(input: {
       });
     },
     () => {
-      demoStore.trackingEvents.unshift({
+      runtimeStore.trackingEvents.unshift({
         id: `utm-${Date.now()}`,
         workspaceId,
         customerId: input.customerId,
@@ -1076,13 +1096,13 @@ export async function findTrackingEventByClickId(clickId?: string | null, worksp
           }
         : null;
     },
-    () => demoStore.trackingEvents.find((event) => event.workspaceId === workspaceId && event.clickId === normalized) ?? null
+    () => runtimeStore.trackingEvents.find((event) => event.workspaceId === workspaceId && event.clickId === normalized) ?? null
   );
 }
 
 export async function getReportRows(workspaceId = DEFAULT_WORKSPACE_ID): Promise<ReportRow[]> {
   const [payments, offers] = await Promise.all([listPayments(workspaceId), listOffers(workspaceId)]);
-  return offers.map((offer) => {
+  return offers.filter(isMusclePrimeOffer).map((offer) => {
     const offerPayments = payments.filter((payment) => payment.offerId === offer.id);
     return {
       group: offer.name,
@@ -1092,6 +1112,10 @@ export async function getReportRows(workspaceId = DEFAULT_WORKSPACE_ID): Promise
       conversions: offerPayments.filter((payment) => payment.status === "PAID").length
     };
   });
+}
+
+function isMusclePrimeOffer(offer: OfferRecord) {
+  return offer.slug === "muscleprime-brasil" || offer.name.toLowerCase() === "muscleprime brasil";
 }
 
 export async function findPayment(id: string, workspaceId = DEFAULT_WORKSPACE_ID) {
@@ -1147,7 +1171,7 @@ export async function ensureConversationForCustomer(customer: { id: string; name
         lastMessageAt: nowIso(),
         messages: []
       };
-      demoStore.conversations.unshift(conversation);
+      runtimeStore.conversations.unshift(conversation);
       return conversation;
     }
   );
@@ -1169,7 +1193,7 @@ export async function markRecoveryConvertedForPayment(paymentId: string, workspa
       });
     },
     () => {
-      demoStore.recoveryAttempts.forEach((attempt) => {
+      runtimeStore.recoveryAttempts.forEach((attempt) => {
         if (attempt.paymentId === paymentId && attempt.workspaceId === workspaceId && ["SCHEDULED", "SENT"].includes(attempt.status)) {
           attempt.status = "CONVERTED";
           attempt.convertedAt = nowIso();
@@ -1317,6 +1341,17 @@ function mapMessage(item: {
     metadataJson: item.metadataJson,
     createdAt: asIso(item.createdAt) ?? nowIso()
   };
+}
+
+function readAttendantMetadata(metadataJson: unknown) {
+  if (!metadataJson || typeof metadataJson !== "object" || Array.isArray(metadataJson)) return null;
+  const attendant = (metadataJson as Record<string, unknown>).attendant;
+  if (!attendant || typeof attendant !== "object" || Array.isArray(attendant)) return null;
+  const id = (attendant as Record<string, unknown>).id;
+  const name = (attendant as Record<string, unknown>).name;
+  return typeof id === "string" && typeof name === "string" && id.trim() && name.trim()
+    ? { id: id.trim(), name: name.trim() }
+    : null;
 }
 
 function mapConversation(item: {

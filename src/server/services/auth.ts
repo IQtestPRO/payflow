@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { demoStore, DEMO_USER_EMAIL, DEMO_USER_PASSWORD, DEMO_WORKSPACE_ID } from "@/lib/demo-data";
 import { hasDatabaseUrl } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -10,47 +9,31 @@ import { slugify } from "@/lib/utils";
 export async function authenticate(email: string, password: string) {
   const normalizedEmail = email.toLowerCase().trim();
 
-  if (hasDatabaseUrl()) {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { email: normalizedEmail },
-        include: { workspace: true }
-      });
-
-      if (user?.passwordHash && (await bcrypt.compare(password, user.passwordHash))) {
-        return createSessionPayload({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          workspaceId: user.workspaceId
-        });
-      }
-    } catch (error) {
-      logger.warn("Auth database lookup failed, demo login remains available", {
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
+  if (!hasDatabaseUrl()) {
+    logger.warn("Auth database lookup skipped because DATABASE_URL is not configured");
+    return null;
   }
 
-  if (normalizedEmail === DEMO_USER_EMAIL && password === DEMO_USER_PASSWORD) {
-    const demoUser = demoStore.users[0];
-    return createSessionPayload(demoUser);
-  }
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    include: { workspace: true }
+  });
 
-  return null;
+  if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return null;
+
+  return createSessionPayload({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    workspaceId: user.workspaceId
+  });
 }
 
 export async function registerWorkspace(input: { name: string; email: string; password: string; workspaceName: string }) {
   const email = input.email.toLowerCase().trim();
 
-  if (!hasDatabaseUrl()) {
-    return createSessionPayload({
-      ...demoStore.users[0],
-      name: input.name || demoStore.users[0].name,
-      email
-    });
-  }
+  if (!hasDatabaseUrl()) throw new Error("DATABASE_URL precisa estar configurado para criar usuarios reais.");
 
   const passwordHash = await bcrypt.hash(input.password, 12);
   const workspaceSlug = slugify(input.workspaceName || input.name || "workspace");
@@ -101,19 +84,7 @@ export async function clearSessionCookie() {
 export async function getCurrentUser() {
   const cookieStore = await cookies();
   const session = await verifySession(cookieStore.get(SESSION_COOKIE)?.value);
-  if (!session || !hasDatabaseUrl() || session.workspaceId !== DEMO_WORKSPACE_ID) {
-    return session;
-  }
-
-  try {
-    const workspace = await prisma.workspace.findFirst({ select: { id: true } });
-    return workspace?.id ? { ...session, workspaceId: workspace.id } : session;
-  } catch (error) {
-    logger.warn("Could not resolve database workspace for demo session", {
-      error: error instanceof Error ? error.message : String(error)
-    });
-    return session;
-  }
+  return session;
 }
 
 function createSessionPayload(user: {

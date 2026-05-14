@@ -1,13 +1,5 @@
 import { z } from "zod";
 
-export const productSchema = z.object({
-  name: z.string().min(2).max(160),
-  description: z.string().max(600).optional().nullable(),
-  price: z.coerce.number().positive(),
-  category: z.string().max(80).optional().nullable(),
-  status: z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]).default("ACTIVE")
-});
-
 export const offerSchema = z.object({
   name: z.string().min(2).max(160),
   productId: z.string().optional().nullable(),

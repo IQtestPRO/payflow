@@ -15,7 +15,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Revise os dados do cadastro" }, { status: 422 });
   }
 
-  const user = await registerWorkspace(parsed.data);
-  await setSessionCookie(user);
-  return NextResponse.json({ ok: true, redirectTo: "/dashboard" });
+  try {
+    const user = await registerWorkspace(parsed.data);
+    await setSessionCookie(user);
+    return NextResponse.json({ ok: true, redirectTo: "/dashboard" });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Nao foi possivel criar o workspace" }, { status: 400 });
+  }
 }

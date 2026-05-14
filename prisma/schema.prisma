@@ -185,7 +185,7 @@ model IntegrationAccount {
   id              String              @id @default(cuid())
   workspaceId     String
   provider        IntegrationProvider
-  status          IntegrationStatus   @default(MOCK)
+  status          IntegrationStatus   @default(DISCONNECTED)
   configEncrypted String?
   configJson      Json?
   lastSyncAt      DateTime?
@@ -336,6 +336,10 @@ model Payment {
   trackingEvents    TrackingEvent[]
 
   @@unique([workspaceId, provider, providerPaymentId])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, provider, createdAt])
+  @@index([workspaceId, status, createdAt])
+  @@index([workspaceId, paidAt])
 }
 
 model RecoveryFlow {
@@ -384,6 +388,8 @@ model RecoveryAttempt {
   payment        Payment               @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   customer       Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
   conversation   Conversation?         @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, scheduledAt])
 }
 
 model Campaign {
@@ -410,6 +416,8 @@ model Campaign {
   workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   adSets             AdSet[]
   ads                Ad[]
+
+  @@index([workspaceId, provider, updatedAt])
 }
 
 model AdSet {

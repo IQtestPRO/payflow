@@ -12,7 +12,7 @@ PayFlow e um MVP SaaS para centralizar WhatsApp, ofertas, clientes, pagamentos p
 - Prisma ORM com PostgreSQL
 - Autenticacao propria por cookie HTTP-only + JWT
 - Zod para validacao
-- Providers mockados e contratos para WhatsApp, Evolution API, Umbrella/UmbrellaPag, Utmify e Meta Ads
+- Providers reais por contrato para WhatsApp, Evolution API, Umbrella/UmbrellaPag, Utmify e Meta Ads
 - Vitest para regras criticas e webhooks
 
 ## Instalacao
@@ -53,12 +53,12 @@ npm run db:migrate
 npm run db:seed
 ```
 
-Login seed:
+O seed nao cria dados operacionais ficticios. Ele cria o workspace e, quando as variaveis abaixo existem, cria acessos reais:
 
-- E-mail: `admin@payflow.local`
-- Senha: `admin123`
+- `PAYFLOW_LUCAS_EMAIL` / `PAYFLOW_LUCAS_PASSWORD`
+- `PAYFLOW_ARTHUR_EMAIL` / `PAYFLOW_ARTHUR_PASSWORD`
 
-Sem `DATABASE_URL`, o app usa dados demo em memoria para permitir navegacao, envio mockado e testes de webhook.
+Sem `DATABASE_URL`, o app usa apenas um runtime store local vazio para desenvolvimento isolado.
 
 ## Rodar
 
@@ -74,7 +74,6 @@ Acesse [http://localhost:3000](http://localhost:3000).
 - `/inbox`
 - `/clientes`
 - `/ofertas`
-- `/produtos`
 - `/pagamentos`
 - `/recuperacoes`
 - `/campanhas`
@@ -84,12 +83,12 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ## Webhooks locais
 
-WhatsApp mock:
+WhatsApp webhook local:
 
 ```bash
 curl -X POST http://localhost:3000/api/webhooks/whatsapp \
   -H "Content-Type: application/json" \
-  -d "{\"phone\":\"5511999999999\",\"name\":\"Cliente Teste\",\"text\":\"Oi, preciso de ajuda\",\"messageId\":\"local-1\"}"
+  -d "{\"phone\":\"55DDDNUMERO\",\"name\":\"NOME_DO_LEAD\",\"text\":\"Oi, preciso de ajuda\",\"messageId\":\"local-1\"}"
 ```
 
 WhatsApp Evolution API envia payloads de mensagem para o mesmo endpoint. Para usar a ponte local, configure `WHATSAPP_PROVIDER=evolution`, suba `evolution-api`, crie a instancia em `/integracoes` e escaneie o QR code.
@@ -99,7 +98,7 @@ Umbrella pendente:
 ```bash
 curl -X POST http://localhost:3000/api/webhooks/umbrella \
   -H "Content-Type: application/json" \
-  -d "{\"id\":\"pay-local-1\",\"status\":\"pending\",\"amount\":297,\"currency\":\"BRL\",\"payment_method\":\"pix\",\"checkout_url\":\"https://checkout.local/pay\",\"customer\":{\"name\":\"Cliente Pix\",\"phone\":\"5511888888888\",\"email\":\"pix@example.com\"},\"offer\":{\"id\":\"offer-02\",\"name\":\"Kit Funil WhatsApp\"}}"
+  -d "{\"id\":\"pay-local-1\",\"status\":\"pending\",\"amount\":297,\"currency\":\"BRL\",\"payment_method\":\"pix\",\"checkout_url\":\"https://pay-flow.shop/checkout\",\"customer\":{\"name\":\"NOME_DO_LEAD\",\"phone\":\"55DDDNUMERO\",\"email\":\"lead@example.com\"},\"offer\":{\"name\":\"MusclePrime Brasil\"}}"
 ```
 
 Umbrella pago:
@@ -107,7 +106,7 @@ Umbrella pago:
 ```bash
 curl -X POST http://localhost:3000/api/webhooks/umbrella \
   -H "Content-Type: application/json" \
-  -d "{\"id\":\"pay-local-1\",\"status\":\"paid\",\"amount\":297,\"currency\":\"BRL\",\"paid_at\":\"2026-05-08T12:00:00.000Z\",\"customer\":{\"name\":\"Cliente Pix\",\"phone\":\"5511888888888\"},\"offer\":{\"id\":\"offer-02\",\"name\":\"Kit Funil WhatsApp\"}}"
+  -d "{\"id\":\"pay-local-1\",\"status\":\"paid\",\"amount\":297,\"currency\":\"BRL\",\"paid_at\":\"2026-05-08T12:00:00.000Z\",\"customer\":{\"name\":\"NOME_DO_LEAD\",\"phone\":\"55DDDNUMERO\"},\"offer\":{\"name\":\"MusclePrime Brasil\"}}"
 ```
 
 O painel `/integracoes` tambem tem um bloco da UmbrellaPag com webhook copiavel, teste de credenciais, geracao de pagamento real via `/api/user/transactions` e teste interno de eventos pendente/pago/recusado/expirado. Para manter compatibilidade com a regra da UmbrellaPag, a geracao real exige nome, telefone, email, CPF/CNPJ e endereco reais do lead.
@@ -143,7 +142,7 @@ Para o caminho local com QR code, configure:
 
 Veja o passo a passo em `docs/evolution-local-quickstart.md`.
 
-Para demo sem credenciais, use `WHATSAPP_PROVIDER=mock`.
+`WHATSAPP_PROVIDER=mock` deve ficar restrito a testes automatizados e desenvolvimento isolado, nunca em producao.
 
 Para Meta Cloud API, configure:
 

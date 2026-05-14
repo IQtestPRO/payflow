@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { demoStore } from "../../src/lib/demo-data";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetRuntimeStore, runtimeStore } from "../../src/lib/runtime-store";
 import { processTriboPayWebhookPayload, processUmbrellaWebhookPayload, processWhatsAppWebhookPayload } from "../../src/server/services/webhooks";
 
 vi.hoisted(() => {
@@ -8,6 +8,27 @@ vi.hoisted(() => {
 });
 
 describe("webhook processing", () => {
+  beforeEach(() => {
+    resetRuntimeStore();
+    runtimeStore.recoveryFlows.push({
+      id: "flow-test",
+      workspaceId: "payflow-workspace",
+      offerId: null,
+      name: "Fluxo de teste",
+      status: "ACTIVE",
+      firstDelayMinutes: 15,
+      secondDelayMinutes: 180,
+      thirdDelayMinutes: 1440,
+      maxAttempts: 3,
+      allowedStartHour: 9,
+      allowedEndHour: 20,
+      template1: "Teste 1",
+      template2: "Teste 2",
+      template3: "Teste 3",
+      stopOnPaid: true
+    });
+  });
+
   it("creates customer, conversation and inbound message from WhatsApp webhook", async () => {
     const result = await processWhatsAppWebhookPayload({
       phone: "551188887777",
@@ -17,8 +38,8 @@ describe("webhook processing", () => {
     });
 
     expect(result.received).toBe(1);
-    expect(demoStore.customers.some((customer) => customer.phone === "551188887777")).toBe(true);
-    expect(demoStore.conversations.some((conversation) => conversation.messages.some((message) => message.providerMessageId === "wa-test-1"))).toBe(true);
+    expect(runtimeStore.customers.some((customer) => customer.phone === "551188887777")).toBe(true);
+    expect(runtimeStore.conversations.some((conversation) => conversation.messages.some((message) => message.providerMessageId === "wa-test-1"))).toBe(true);
   });
 
   it("schedules recovery attempts for a pending Umbrella payment", async () => {
@@ -44,7 +65,7 @@ describe("webhook processing", () => {
     expect(result).toHaveProperty("payment");
     const createdPayment = "payment" in result ? result.payment : null;
     if (!createdPayment) throw new Error("Payment was not created");
-    expect(demoStore.recoveryAttempts.some((attempt) => attempt.paymentId === createdPayment.id && attempt.status === "SCHEDULED")).toBe(true);
+    expect(runtimeStore.recoveryAttempts.some((attempt) => attempt.paymentId === createdPayment.id && attempt.status === "SCHEDULED")).toBe(true);
   });
 
   it("marks pending recovery as converted when Umbrella sends paid status", async () => {
@@ -70,7 +91,7 @@ describe("webhook processing", () => {
       offer: { id: "offer-05", name: "Diagnóstico Express de Funil" }
     });
 
-    expect(demoStore.recoveryAttempts.filter((attempt) => attempt.paymentId === pendingPayment.id).every((attempt) => attempt.status === "CONVERTED")).toBe(true);
+    expect(runtimeStore.recoveryAttempts.filter((attempt) => attempt.paymentId === pendingPayment.id).every((attempt) => attempt.status === "CONVERTED")).toBe(true);
   });
 
   it("schedules recovery attempts for a pending TriboPay payment", async () => {
@@ -103,6 +124,6 @@ describe("webhook processing", () => {
     if (!createdPayment) throw new Error("Payment was not created");
     expect(createdPayment.provider).toBe("TRIBOPAY");
     expect(createdPayment.amount).toBe(197);
-    expect(demoStore.recoveryAttempts.some((attempt) => attempt.paymentId === createdPayment.id && attempt.status === "SCHEDULED")).toBe(true);
+    expect(runtimeStore.recoveryAttempts.some((attempt) => attempt.paymentId === createdPayment.id && attempt.status === "SCHEDULED")).toBe(true);
   });
 });

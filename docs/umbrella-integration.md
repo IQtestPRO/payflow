@@ -130,7 +130,7 @@ Exemplo simples:
   "amount": 297,
   "currency": "BRL",
   "payment_method": "pix",
-  "checkout_url": "https://checkout.local/pay",
+  "checkout_url": "https://pay-flow.shop/checkout",
   "customer": {
       "name": "<nome-real-do-lead>",
       "phone": "<telefone-real-com-ddi>",

@@ -55,12 +55,6 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ## WhatsApp em produção
 
-Para publicar agora sem WhatsApp real:
-
-```bash
-WHATSAPP_PROVIDER=mock
-```
-
 Para usar Evolution em produção:
 
 ```bash
@@ -130,7 +124,7 @@ $env:DATABASE_URL="postgresql://..."
 npm.cmd run db:deploy
 ```
 
-Seed em produção é opcional. Use apenas se quiser dados demo:
+Seed em producao e opcional. Use apenas para criar o workspace e os usuarios reais definidos em `PAYFLOW_LUCAS_*` e `PAYFLOW_ARTHUR_*`:
 
 ```powershell
 $env:DATABASE_URL="postgresql://..."
