@@ -103,8 +103,47 @@ type SendResponse = {
 };
 
 type ChargeArtifact = "qr_code" | "pix_copy_paste";
+type DraftFieldKey =
+  | keyof Pick<ChargeDraft, "name" | "phone" | "email" | "document" | "product" | "amount">
+  | `address.${keyof ChargeDraft["address"]}`;
 
-const criticalFieldKeys = ["name", "phone", "email", "document", "product", "amount"] as const;
+type RequiredField = {
+  key: DraftFieldKey;
+  label: string;
+};
+
+type ZipLookupState = {
+  status: "idle" | "loading" | "success" | "error";
+  message: string | null;
+};
+
+type ViaCepResponse = {
+  erro?: boolean;
+  cep?: string;
+  logradouro?: string;
+  complemento?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
+};
+
+const baseRequiredFields: RequiredField[] = [
+  { key: "name", label: "nome" },
+  { key: "phone", label: "telefone" },
+  { key: "email", label: "e-mail" },
+  { key: "document", label: "CPF/CNPJ" },
+  { key: "product", label: "produto" },
+  { key: "amount", label: "valor" }
+];
+
+const umbrellaRequiredFields: RequiredField[] = [
+  { key: "address.zipCode", label: "CEP" },
+  { key: "address.street", label: "rua" },
+  { key: "address.streetNumber", label: "numero" },
+  { key: "address.neighborhood", label: "bairro" },
+  { key: "address.city", label: "cidade" },
+  { key: "address.state", label: "UF" }
+];
 
 export function InboxChargePanel({
   conversation,
@@ -128,6 +167,8 @@ export function InboxChargePanel({
   const [selectedGateway, setSelectedGateway] = useState<GatewayId | null>(null);
   const [draft, setDraft] = useState<ChargeDraft | null>(null);
   const [charge, setCharge] = useState<ChargeResponse | null>(null);
+  const [invalidFields, setInvalidFields] = useState<DraftFieldKey[]>([]);
+  const [zipLookup, setZipLookup] = useState<ZipLookupState>({ status: "idle", message: null });
   const [sentArtifacts, setSentArtifacts] = useState<Record<ChargeArtifact, boolean>>({
     qr_code: false,
     pix_copy_paste: false
@@ -139,6 +180,8 @@ export function InboxChargePanel({
     setError(null);
     setNotice(null);
     setCharge(null);
+    setInvalidFields([]);
+    setZipLookup({ status: "idle", message: null });
     setSentArtifacts({ qr_code: false, pix_copy_paste: false });
     setSelectedGateway(null);
 
@@ -160,15 +203,68 @@ export function InboxChargePanel({
 
   const selectedGatewayOption = useMemo(() => gateways.find((gateway) => gateway.id === selectedGateway) ?? null, [gateways, selectedGateway]);
   const trackingCount = draft ? Object.values(draft.tracking).filter((value) => typeof value === "string" && value.trim()).length : 0;
-  const missingCriticalFields = draft ? countMissingCriticalFields(draft) : 0;
+  const missingRequiredFields = useMemo(() => (draft ? getMissingRequiredFields(draft, selectedGateway) : []), [draft, selectedGateway]);
+  const missingRequiredCount = missingRequiredFields.length;
+  const invalidFieldSet = useMemo(() => new Set(invalidFields), [invalidFields]);
+  const zipCodeForLookup = draft?.address.zipCode ?? "";
+
+  useEffect(() => {
+    if (!open) return;
+    if (!zipCodeForLookup) {
+      setZipLookup({ status: "idle", message: null });
+      return;
+    }
+
+    const digits = zipCodeForLookup.replace(/\D/g, "");
+    if (digits.length !== 8) {
+      setZipLookup({ status: "idle", message: null });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setZipLookup({ status: "loading", message: "Buscando endereco pelo CEP..." });
+
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { signal: controller.signal });
+        const json = (await response.json().catch(() => ({}))) as ViaCepResponse;
+        if (!response.ok || json.erro) throw new Error("CEP nao encontrado.");
+
+        setDraft((current) => applyCepAddress(current, digits, json));
+        setInvalidFields((current) => current.filter((key) => !["address.zipCode", "address.street", "address.neighborhood", "address.city", "address.state"].includes(key)));
+        setZipLookup({ status: "success", message: "Endereco preenchido pelo CEP. Informe apenas o numero, se necessario." });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setZipLookup({ status: "error", message: "Nao foi possivel preencher este CEP automaticamente." });
+      }
+    }, 450);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [open, zipCodeForLookup]);
 
   if (!open) return null;
 
+  function clearInvalidField(...keys: DraftFieldKey[]) {
+    setInvalidFields((current) => current.filter((key) => !keys.includes(key)));
+    if (error?.includes("campos marcados")) setError(null);
+  }
+
   async function generateCharge() {
     if (!draft || !selectedGateway) return;
+    if (missingRequiredFields.length > 0) {
+      setInvalidFields(missingRequiredFields.map((field) => field.key));
+      setError(`Preencha os campos marcados como insuficientes: ${missingRequiredFields.map((field) => field.label).join(", ")}.`);
+      setNotice(null);
+      return;
+    }
+
     setGenerating(true);
     setError(null);
     setNotice(null);
+    setInvalidFields([]);
     setCharge(null);
     setSentArtifacts({ qr_code: false, pix_copy_paste: false });
 
@@ -275,7 +371,11 @@ export function InboxChargePanel({
                       key={gateway.id}
                       gateway={gateway}
                       active={selectedGateway === gateway.id}
-                      onSelect={() => setSelectedGateway(gateway.id)}
+                      onSelect={() => {
+                        setSelectedGateway(gateway.id);
+                        setInvalidFields([]);
+                        setError(null);
+                      }}
                     />
                   ))}
                 </div>
@@ -284,7 +384,7 @@ export function InboxChargePanel({
               <PanelCard eyebrow="Fluxo" title="Status operacional">
                 <div className="grid gap-2 text-sm">
                   <FlowRow label="Gateway" value={selectedGatewayOption?.name ?? "Nao selecionado"} done={Boolean(selectedGatewayOption)} />
-                  <FlowRow label="Dados principais" value={missingCriticalFields === 0 ? "Completos" : `${missingCriticalFields} pendente(s)`} done={missingCriticalFields === 0} />
+                  <FlowRow label="Campos obrigatorios" value={missingRequiredCount === 0 ? "Completos" : `${missingRequiredCount} pendente(s)`} done={missingRequiredCount === 0} />
                   <FlowRow label="UTMs" value={`${trackingCount} parametro(s)`} done={trackingCount > 0} />
                   <FlowRow label="Cobranca" value={charge?.payment ? "Gerada" : "Aguardando"} done={Boolean(charge?.payment)} />
                 </div>
@@ -296,8 +396,8 @@ export function InboxChargePanel({
                 eyebrow="2. Dados captados"
                 title="Cliente, produto e valor"
                 action={
-                  missingCriticalFields > 0 ? (
-                    <StatusPill tone="warning">{missingCriticalFields} campo(s) pendente(s)</StatusPill>
+                  missingRequiredCount > 0 ? (
+                    <StatusPill tone="warning">{missingRequiredCount} campo(s) pendente(s)</StatusPill>
                   ) : (
                     <StatusPill tone="success">Payload pronto</StatusPill>
                   )
@@ -305,17 +405,71 @@ export function InboxChargePanel({
               >
                 <FormSection title="Cliente">
                   <AutoGrid>
-                    <Field label="Nome" value={draft.name} state={draft.fieldState.name} onChange={(value) => updateDraft(setDraft, "name", value)} />
-                    <Field label="Telefone" value={draft.phone} state={draft.fieldState.phone} onChange={(value) => updateDraft(setDraft, "phone", value)} />
-                    <Field label="E-mail" value={draft.email} state={draft.fieldState.email} onChange={(value) => updateDraft(setDraft, "email", value)} />
-                    <Field label="CPF/CNPJ" value={draft.document} state={draft.fieldState.document} onChange={(value) => updateDraft(setDraft, "document", value)} />
+                    <Field
+                      label="Nome"
+                      value={draft.name}
+                      state={draft.fieldState.name}
+                      invalid={invalidFieldSet.has("name")}
+                      onChange={(value) => {
+                        updateDraft(setDraft, "name", value);
+                        clearInvalidField("name");
+                      }}
+                    />
+                    <Field
+                      label="Telefone"
+                      value={draft.phone}
+                      state={draft.fieldState.phone}
+                      invalid={invalidFieldSet.has("phone")}
+                      onChange={(value) => {
+                        updateDraft(setDraft, "phone", value);
+                        clearInvalidField("phone");
+                      }}
+                    />
+                    <Field
+                      label="E-mail"
+                      value={draft.email}
+                      state={draft.fieldState.email}
+                      invalid={invalidFieldSet.has("email")}
+                      onChange={(value) => {
+                        updateDraft(setDraft, "email", value);
+                        clearInvalidField("email");
+                      }}
+                    />
+                    <Field
+                      label="CPF/CNPJ"
+                      value={draft.document}
+                      state={draft.fieldState.document}
+                      invalid={invalidFieldSet.has("document")}
+                      onChange={(value) => {
+                        updateDraft(setDraft, "document", value);
+                        clearInvalidField("document");
+                      }}
+                    />
                   </AutoGrid>
                 </FormSection>
 
                 <FormSection title="Cobranca" className="mt-5">
                   <AutoGrid>
-                    <Field label="Produto" value={draft.product} state={draft.fieldState.product} onChange={(value) => updateDraft(setDraft, "product", value)} />
-                    <Field label="Valor R$" value={draft.amount} state={draft.fieldState.amount} onChange={(value) => updateDraft(setDraft, "amount", value)} />
+                    <Field
+                      label="Produto"
+                      value={draft.product}
+                      state={draft.fieldState.product}
+                      invalid={invalidFieldSet.has("product")}
+                      onChange={(value) => {
+                        updateDraft(setDraft, "product", value);
+                        clearInvalidField("product");
+                      }}
+                    />
+                    <Field
+                      label="Valor R$"
+                      value={draft.amount}
+                      state={draft.fieldState.amount}
+                      invalid={invalidFieldSet.has("amount")}
+                      onChange={(value) => {
+                        updateDraft(setDraft, "amount", value);
+                        clearInvalidField("amount");
+                      }}
+                    />
                   </AutoGrid>
                 </FormSection>
 
@@ -324,22 +478,70 @@ export function InboxChargePanel({
                   <div className="mt-4 grid gap-5">
                     <FormSection title="Endereco">
                       <AutoGrid>
-                        <Field label="CEP" value={draft.address.zipCode} state={draft.fieldState["address.zipCode"]} onChange={(value) => updateAddress(setDraft, "zipCode", value)} />
-                        <Field label="Rua" value={draft.address.street} state={draft.fieldState["address.street"]} onChange={(value) => updateAddress(setDraft, "street", value)} />
+                        <Field
+                          label="CEP"
+                          value={draft.address.zipCode}
+                          state={draft.fieldState["address.zipCode"]}
+                          invalid={invalidFieldSet.has("address.zipCode")}
+                          helpText={zipLookup.message}
+                          helpTone={zipLookup.status === "error" ? "error" : zipLookup.status === "success" ? "success" : "muted"}
+                          onChange={(value) => {
+                            updateAddress(setDraft, "zipCode", value.replace(/\D/g, "").slice(0, 8));
+                            clearInvalidField("address.zipCode");
+                            setZipLookup({ status: "idle", message: null });
+                          }}
+                        />
+                        <Field
+                          label="Rua"
+                          value={draft.address.street}
+                          state={draft.fieldState["address.street"]}
+                          invalid={invalidFieldSet.has("address.street")}
+                          onChange={(value) => {
+                            updateAddress(setDraft, "street", value);
+                            clearInvalidField("address.street");
+                          }}
+                        />
                         <Field
                           label="Numero"
                           value={draft.address.streetNumber}
                           state={draft.fieldState["address.streetNumber"]}
-                          onChange={(value) => updateAddress(setDraft, "streetNumber", value)}
+                          invalid={invalidFieldSet.has("address.streetNumber")}
+                          onChange={(value) => {
+                            updateAddress(setDraft, "streetNumber", value);
+                            clearInvalidField("address.streetNumber");
+                          }}
                         />
                         <Field
                           label="Bairro"
                           value={draft.address.neighborhood}
                           state={draft.fieldState["address.neighborhood"]}
-                          onChange={(value) => updateAddress(setDraft, "neighborhood", value)}
+                          invalid={invalidFieldSet.has("address.neighborhood")}
+                          onChange={(value) => {
+                            updateAddress(setDraft, "neighborhood", value);
+                            clearInvalidField("address.neighborhood");
+                          }}
                         />
-                        <Field label="Cidade" value={draft.address.city} state={draft.fieldState["address.city"]} onChange={(value) => updateAddress(setDraft, "city", value)} />
-                        <Field label="UF" value={draft.address.state} state={draft.fieldState["address.state"]} onChange={(value) => updateAddress(setDraft, "state", value)} maxLength={2} />
+                        <Field
+                          label="Cidade"
+                          value={draft.address.city}
+                          state={draft.fieldState["address.city"]}
+                          invalid={invalidFieldSet.has("address.city")}
+                          onChange={(value) => {
+                            updateAddress(setDraft, "city", value);
+                            clearInvalidField("address.city");
+                          }}
+                        />
+                        <Field
+                          label="UF"
+                          value={draft.address.state}
+                          state={draft.fieldState["address.state"]}
+                          invalid={invalidFieldSet.has("address.state")}
+                          onChange={(value) => {
+                            updateAddress(setDraft, "state", value.toUpperCase());
+                            clearInvalidField("address.state");
+                          }}
+                          maxLength={2}
+                        />
                         <Field label="Complemento" value={draft.address.complement} onChange={(value) => updateAddress(setDraft, "complement", value)} />
                       </AutoGrid>
                     </FormSection>
@@ -546,38 +748,58 @@ function Field({
   value,
   state,
   onChange,
-  maxLength
+  maxLength,
+  invalid = false,
+  helpText,
+  helpTone = "muted"
 }: {
   label: string;
   value: string;
   state?: FieldState;
   onChange: (value: string) => void;
   maxLength?: number;
+  invalid?: boolean;
+  helpText?: string | null;
+  helpTone?: "muted" | "success" | "error";
 }) {
   const missing = isMissingValue(value, state);
+  const displayValue = displayFieldValue(value);
 
   return (
     <label className="grid min-w-0 gap-1.5">
       <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-bold uppercase text-muted-foreground">
         <span className="truncate">{label}</span>
-        {missing ? <span className="shrink-0 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700">Nao encontrado</span> : null}
+        {invalid ? (
+          <span className="shrink-0 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">Insuficiente</span>
+        ) : missing ? (
+          <span className="shrink-0 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700">Nao encontrado</span>
+        ) : null}
       </span>
       <input
-        className={cn("field min-w-0", missing && "border-amber-300 bg-amber-50/40")}
-        value={value}
+        className={cn("field min-w-0", missing && "border-amber-300 bg-amber-50/40", invalid && "border-red-400 bg-red-50/45 text-red-950 focus:border-red-500 focus:ring-red-200")}
+        value={displayValue}
         onChange={(event) => onChange(event.target.value)}
         maxLength={maxLength}
-        aria-invalid={missing}
+        aria-invalid={invalid}
       />
+      {helpText ? (
+        <span className={cn("text-xs font-semibold", helpTone === "success" && "text-emerald-700", helpTone === "error" && "text-red-700", helpTone === "muted" && "text-muted-foreground")}>
+          {helpText}
+        </span>
+      ) : invalid ? (
+        <span className="text-xs font-semibold text-red-700">Preencha este campo para gerar a cobranca.</span>
+      ) : null}
     </label>
   );
 }
 
 function ReviewItem({ label, value, warning }: { label: string; value: string; warning?: boolean }) {
+  const displayValue = displayFieldValue(value);
+
   return (
     <div className={cn("min-w-0 rounded-lg border bg-slate-50/75 p-3", warning ? "border-amber-200 bg-amber-50/50" : "border-border/70")}>
       <p className="text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 truncate text-sm font-extrabold", warning ? "text-amber-800" : "text-foreground")}>{value || "Nao informado"}</p>
+      <p className={cn("mt-1 truncate text-sm font-extrabold", warning ? "text-amber-800" : "text-foreground")}>{displayValue || "Nao informado"}</p>
     </div>
   );
 }
@@ -619,11 +841,69 @@ function MessageBanner({ children, tone }: { children: ReactNode; tone: "error" 
 }
 
 function isMissingValue(value: string, state?: FieldState) {
-  return value === "Nao encontrado" || value === "Não encontrado" || state?.found === false;
+  return isNotFoundLabel(value) || state?.found === false;
 }
 
-function countMissingCriticalFields(draft: ChargeDraft) {
-  return criticalFieldKeys.filter((key) => isMissingValue(draft[key], draft.fieldState[key])).length;
+function isNotFoundLabel(value?: string | null) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "nao encontrado" || normalized === "não encontrado" || normalized === "nÃ£o encontrado";
+}
+
+function displayFieldValue(value: string) {
+  return isNotFoundLabel(value) ? "" : value;
+}
+
+function hasUsableValue(value?: string | null) {
+  return Boolean(displayFieldValue(String(value ?? "")).trim());
+}
+
+function getMissingRequiredFields(draft: ChargeDraft, gateway: GatewayId | null): RequiredField[] {
+  const fields = gateway === "umbrella" ? [...baseRequiredFields, ...umbrellaRequiredFields] : baseRequiredFields;
+  return fields.filter((field) => !hasUsableValue(readDraftField(draft, field.key)));
+}
+
+function readDraftField(draft: ChargeDraft, key: DraftFieldKey) {
+  if (key.startsWith("address.")) {
+    const addressKey = key.replace("address.", "") as keyof ChargeDraft["address"];
+    return draft.address[addressKey] ?? "";
+  }
+
+  return draft[key as keyof Pick<ChargeDraft, "name" | "phone" | "email" | "document" | "product" | "amount">] ?? "";
+}
+
+function applyCepAddress(current: ChargeDraft | null, zipCode: string, response: ViaCepResponse): ChargeDraft | null {
+  if (!current) return current;
+
+  const street = cleanCepValue(response.logradouro);
+  const neighborhood = cleanCepValue(response.bairro);
+  const city = cleanCepValue(response.localidade);
+  const state = cleanCepValue(response.uf)?.toUpperCase();
+  const complement = cleanCepValue(response.complemento);
+
+  return {
+    ...current,
+    address: {
+      ...current.address,
+      zipCode,
+      street: street || current.address.street,
+      neighborhood: neighborhood || current.address.neighborhood,
+      city: city || current.address.city,
+      state: state || current.address.state,
+      complement: complement || current.address.complement
+    },
+    fieldState: {
+      ...current.fieldState,
+      "address.zipCode": { found: true, source: "manual" },
+      ...(street ? { "address.street": { found: true, source: "manual" as const } } : {}),
+      ...(neighborhood ? { "address.neighborhood": { found: true, source: "manual" as const } } : {}),
+      ...(city ? { "address.city": { found: true, source: "manual" as const } } : {}),
+      ...(state ? { "address.state": { found: true, source: "manual" as const } } : {})
+    }
+  };
+}
+
+function cleanCepValue(value?: string | null) {
+  return String(value ?? "").trim();
 }
 
 function buildReviewPayload(draft: ChargeDraft, gateway: GatewayOption | null) {
@@ -636,15 +916,15 @@ function buildReviewPayload(draft: ChargeDraft, gateway: GatewayOption | null) {
         }
       : null,
     customer: {
-      name: draft.name,
-      phone: draft.phone,
-      email: draft.email,
-      document: draft.document
+      name: displayFieldValue(draft.name),
+      phone: displayFieldValue(draft.phone),
+      email: displayFieldValue(draft.email),
+      document: displayFieldValue(draft.document)
     },
-    address: draft.address,
+    address: Object.fromEntries(Object.entries(draft.address).map(([key, value]) => [key, displayFieldValue(value)])),
     charge: {
-      product: draft.product,
-      amountBRL: draft.amount
+      product: displayFieldValue(draft.product),
+      amountBRL: displayFieldValue(draft.amount)
     },
     tracking: Object.fromEntries(Object.entries(draft.tracking).filter(([, value]) => typeof value === "string" && value.trim()))
   };
