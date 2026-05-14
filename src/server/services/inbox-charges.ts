@@ -308,6 +308,7 @@ async function enrichDraftFromTrackingRedirect(draft: InboxChargeDraft, workspac
   if (!trackingEvent) return draft;
 
   const offer = await findOffer(trackingEvent.offerId, workspaceId);
+  const rawQuery = readTrackingRawQuery(trackingEvent.rawPayloadJson);
   const shouldUseOfferProduct = isNotFound(draft.product) && offer?.name;
   const shouldUseOfferAmount = isNotFound(draft.amount) && typeof offer?.price === "number" && offer.price > 0;
 
@@ -325,6 +326,8 @@ async function enrichDraftFromTrackingRedirect(draft: InboxChargeDraft, workspac
       content: draft.tracking.content ?? trackingEvent.content ?? null,
       term: draft.tracking.term ?? trackingEvent.term ?? null,
       fbclid: draft.tracking.fbclid ?? trackingEvent.fbclid ?? null,
+      src: draft.tracking.src ?? readRawQueryParam(rawQuery, "src"),
+      sck: draft.tracking.sck ?? readRawQueryParam(rawQuery, "sck"),
       clickId
     },
     fieldState: {
@@ -333,6 +336,17 @@ async function enrichDraftFromTrackingRedirect(draft: InboxChargeDraft, workspac
       ...(shouldUseOfferAmount ? { amount: { found: true, source: "offer" as const } } : {})
     }
   };
+}
+
+function readTrackingRawQuery(rawPayloadJson: unknown) {
+  const payload = isRecord(rawPayloadJson) ? rawPayloadJson : {};
+  const query = isRecord(payload.query) ? payload.query : {};
+  return query;
+}
+
+function readRawQueryParam(query: Record<string, unknown>, key: string) {
+  const value = query[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function normalizeInboxGateway(value: string): InboxChargeGatewayId | null {

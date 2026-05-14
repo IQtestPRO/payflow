@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConversationRecord, CustomerRecord, OfferRecord } from "../../src/lib/types";
-import { buildInboxChargeDraft, parseMoneyAmount } from "../../src/server/services/inbox-charge-parser";
+import { NOT_FOUND_LABEL, buildInboxChargeDraft, parseMoneyAmount } from "../../src/server/services/inbox-charge-parser";
 
 describe("inbox charge parser", () => {
   it("prefills customer, offer and tracking data from conversation context", () => {
@@ -67,6 +67,18 @@ describe("inbox charge parser", () => {
       campaign: "muscleprime_x1_realtest",
       clickId: "PF-MPBR-REAL001"
     });
+  });
+
+  it("does not treat generic WhatsApp service intent as a product or amount", () => {
+    const draft = buildInboxChargeDraft({
+      conversation: conversationRecord(["Ola, vim do anuncio da MusclePrime Brasil e quero atendimento pelo WhatsApp. Codigo PF-MPBR-REAL002."]),
+      customer: null,
+      offer: null
+    });
+
+    expect(draft.product).toBe(NOT_FOUND_LABEL);
+    expect(draft.amount).toBe(NOT_FOUND_LABEL);
+    expect(draft.tracking.clickId).toBe("PF-MPBR-REAL002");
   });
 
   it("parses Brazilian currency values safely", () => {
