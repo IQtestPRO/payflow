@@ -3,6 +3,7 @@ import Link from "next/link";
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { IntegrationLogo, integrationBrands } from "@/components/integrations/integration-brand";
 import { DataTable } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -105,18 +106,22 @@ export default async function DashboardPage() {
             <p className="section-label">Risco comercial</p>
             <h2 className="mt-1 text-xl font-extrabold">Ofertas com maior abandono</h2>
           </div>
-          <DataTable headers={["Oferta", "Status", "Abandono", "Recuperacoes"]}>
-            {snapshot.offersByAbandonment.map((offer) => (
-              <tr key={offer.id}>
-                <td className="px-4 py-3 font-semibold">{offer.name}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={offer.status} />
-                </td>
-                <td className="px-4 py-3 font-medium tabular-nums">{offer.abandonments}</td>
-                <td className="px-4 py-3 font-medium tabular-nums">{offer.recoveries}</td>
-              </tr>
-            ))}
-          </DataTable>
+          {snapshot.offersByAbandonment.length ? (
+            <DataTable headers={["Oferta", "Status", "Abandono", "Recuperacoes"]}>
+              {snapshot.offersByAbandonment.map((offer) => (
+                <tr key={offer.id}>
+                  <td className="px-4 py-3 font-semibold">{offer.name}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={offer.status} />
+                  </td>
+                  <td className="px-4 py-3 font-medium tabular-nums">{offer.abandonments}</td>
+                  <td className="px-4 py-3 font-medium tabular-nums">{offer.recoveries}</td>
+                </tr>
+              ))}
+            </DataTable>
+          ) : (
+            <EmptyState title="Nenhuma oferta real em monitoramento" description="A oferta MusclePrime Brasil aparece aqui quando for cadastrada com eventos reais." />
+          )}
         </div>
 
         <div className="grid gap-3">
@@ -124,16 +129,20 @@ export default async function DashboardPage() {
             <p className="section-label">Aquisição</p>
             <h2 className="mt-1 text-xl font-extrabold">Campanhas em destaque</h2>
           </div>
-          <DataTable headers={["Campanha", "Gasto", "Receita", "ROAS"]}>
-            {snapshot.topCampaigns.map((campaign) => (
-              <tr key={campaign.id}>
-                <td className="px-4 py-3 font-semibold">{campaign.name}</td>
-                <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(campaign.spend)}</td>
-                <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(campaign.revenue)}</td>
-                <td className="px-4 py-3 font-bold text-emerald-700 tabular-nums">{campaign.roas.toFixed(2)}x</td>
-              </tr>
-            ))}
-          </DataTable>
+          {snapshot.topCampaigns.length ? (
+            <DataTable headers={["Campanha", "Gasto", "Receita", "ROAS"]}>
+              {snapshot.topCampaigns.map((campaign) => (
+                <tr key={campaign.id}>
+                  <td className="px-4 py-3 font-semibold">{campaign.name}</td>
+                  <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(campaign.spend)}</td>
+                  <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(campaign.revenue)}</td>
+                  <td className="px-4 py-3 font-bold text-emerald-700 tabular-nums">{campaign.roas.toFixed(2)}x</td>
+                </tr>
+              ))}
+            </DataTable>
+          ) : (
+            <EmptyState title="Nenhuma campanha real sincronizada" description="Quando a Meta Ads retornar campanhas, elas aparecem aqui sem preenchimento ficticio." />
+          )}
         </div>
       </section>
     </div>

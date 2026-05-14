@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { DashboardSnapshot } from "@/lib/types";
 
 const statusColors = ["#0967FF", "#3BEA8D", "#16C8C7", "#EF4444", "#06245B", "#64748B"];
@@ -11,26 +12,30 @@ export function DashboardCharts({ snapshot }: { snapshot: DashboardSnapshot }) {
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       <ChartFrame title="Receita por dia" eyebrow="Tendencia diaria">
-        <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={snapshot.revenueByDay} margin={chartMargin}>
-            <CartesianGrid stroke="#D9E5F4" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={axisStyle} dy={8} />
-            <YAxis tickLine={false} axisLine={false} tick={axisStyle} width={72} />
-            <Tooltip content={<PremiumTooltip currency />} cursor={{ stroke: "#0967FF", strokeWidth: 1, strokeDasharray: "4 4" }} />
-            <Line
-              type="monotone"
-              dataKey="revenue"
-              stroke="#0967FF"
-              strokeWidth={3}
-              dot={{ r: 4, fill: "#3BEA8D", stroke: "#FFFFFF", strokeWidth: 2 }}
-              activeDot={{ r: 6, fill: "#0967FF", stroke: "#B7FFE0", strokeWidth: 3 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {hasRevenue(snapshot) ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={snapshot.revenueByDay} margin={chartMargin}>
+              <CartesianGrid stroke="#D9E5F4" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={axisStyle} dy={8} />
+              <YAxis tickLine={false} axisLine={false} tick={axisStyle} width={72} />
+              <Tooltip content={<PremiumTooltip currency />} cursor={{ stroke: "#0967FF", strokeWidth: 1, strokeDasharray: "4 4" }} />
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="#0967FF"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "#3BEA8D", stroke: "#FFFFFF", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#0967FF", stroke: "#B7FFE0", strokeWidth: 3 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <ChartEmpty title="Sem receita real" description="Pagamentos aprovados aparecerao aqui quando os gateways enviarem dados." />
+        )}
       </ChartFrame>
 
       <ChartFrame title="Pagamentos por status" eyebrow="Saude do checkout">
-        <ResponsiveContainer width="100%" height={260}>
+        {snapshot.paymentsByStatus.length ? <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             <Pie data={snapshot.paymentsByStatus} dataKey="count" nameKey="status" innerRadius={62} outerRadius={94} paddingAngle={3} stroke="#FFFFFF" strokeWidth={3}>
               {snapshot.paymentsByStatus.map((entry, index) => (
@@ -40,11 +45,11 @@ export function DashboardCharts({ snapshot }: { snapshot: DashboardSnapshot }) {
             <Tooltip content={<PremiumTooltip />} />
             <Legend iconType="circle" wrapperStyle={{ fontSize: 12, fontWeight: 600, color: "#475569" }} />
           </PieChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : <ChartEmpty title="Sem pagamentos" description="A distribuicao por status sera criada somente com pagamentos reais." />}
       </ChartFrame>
 
       <ChartFrame title="Conversas por status" eyebrow="Carga da inbox">
-        <ResponsiveContainer width="100%" height={260}>
+        {snapshot.conversationsByStatus.length ? <ResponsiveContainer width="100%" height={260}>
           <BarChart data={snapshot.conversationsByStatus} margin={chartMargin}>
             <CartesianGrid stroke="#D9E5F4" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="status" tickLine={false} axisLine={false} interval={0} tick={axisStyle} dy={8} />
@@ -52,11 +57,11 @@ export function DashboardCharts({ snapshot }: { snapshot: DashboardSnapshot }) {
             <Tooltip content={<PremiumTooltip />} cursor={{ fill: "rgba(9, 103, 255, 0.06)" }} />
             <Bar dataKey="count" fill="#16C8C7" radius={[8, 8, 2, 2]} />
           </BarChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : <ChartEmpty title="Sem conversas" description="Novas mensagens do WhatsApp alimentarao este grafico." />}
       </ChartFrame>
 
       <ChartFrame title="Campanhas com melhor desempenho" eyebrow="Performance de midia">
-        <ResponsiveContainer width="100%" height={260}>
+        {snapshot.topCampaigns.length ? <ResponsiveContainer width="100%" height={260}>
           <BarChart data={snapshot.topCampaigns} margin={chartMargin}>
             <CartesianGrid stroke="#D9E5F4" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tick={axisStyle} dy={8} />
@@ -64,8 +69,20 @@ export function DashboardCharts({ snapshot }: { snapshot: DashboardSnapshot }) {
             <Tooltip content={<PremiumTooltip suffix="x" />} cursor={{ fill: "rgba(59, 234, 141, 0.08)" }} />
             <Bar dataKey="roas" fill="#3BEA8D" radius={[8, 8, 2, 2]} />
           </BarChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : <ChartEmpty title="Sem campanhas reais" description="Campanhas Meta aparecem apos a sincronizacao da conta de anuncios." />}
       </ChartFrame>
+    </div>
+  );
+}
+
+function hasRevenue(snapshot: DashboardSnapshot) {
+  return snapshot.revenueByDay.some((day) => day.revenue > 0);
+}
+
+function ChartEmpty({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="flex h-[260px] items-center justify-center">
+      <EmptyState title={title} description={description} framed={false} />
     </div>
   );
 }

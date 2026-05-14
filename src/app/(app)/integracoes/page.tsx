@@ -10,8 +10,8 @@ export default async function IntegrationsPage() {
   const user = await getCurrentUser();
   const integrations = await listIntegrations(user?.workspaceId);
   const visibleIntegrations = integrations.filter((integration) => integration.provider !== "UMBRELLA");
-  const mockCount = visibleIntegrations.filter((integration) => integration.status === "MOCK").length;
   const connectedCount = visibleIntegrations.filter((integration) => integration.status === "CONNECTED").length;
+  const pendingCount = visibleIntegrations.filter((integration) => integration.status !== "CONNECTED").length;
 
   return (
     <div className="grid gap-6">
@@ -38,7 +38,7 @@ export default async function IntegrationsPage() {
           </div>
           <div className="grid grid-cols-2 border-t border-white/10 bg-white/5 lg:border-l lg:border-t-0">
             <SummaryMetric label="Conectores" value={visibleIntegrations.length} />
-            <SummaryMetric label="Modo mock" value={mockCount} />
+            <SummaryMetric label="Pendentes" value={pendingCount} />
             <SummaryMetric label="Conectados" value={connectedCount} />
             <div className="border-l border-t border-white/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-normal text-white/60">Prioridade</p>

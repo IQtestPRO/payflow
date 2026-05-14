@@ -14,7 +14,7 @@ export default function SettingsPage() {
         >
           <label className="grid gap-2 text-sm font-semibold">
             Nome do workspace
-            <input className="field" defaultValue="PayFlow Demo" />
+            <input className="field" defaultValue="PayFlow" />
           </label>
         </SettingsBlock>
 

@@ -55,7 +55,7 @@ const labelByStatus: Record<string, string> = {
   PIX_GENERATED: "Pix gerado",
   BOLETO_GENERATED: "Boleto gerado",
   RECOVERY: "Recuperacao",
-  MOCK: "Mock",
+  MOCK: "Legado local",
   PAUSED: "Pausado",
   DISCONNECTED: "Desconectado",
   RESOLVED: "Resolvida",

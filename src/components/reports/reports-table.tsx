@@ -1,5 +1,6 @@
 import { Download } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency } from "@/lib/format";
 import type { ReportRow } from "@/lib/types";
 
@@ -20,17 +21,22 @@ export function ReportsTable({ rows }: { rows: ReportRow[] }) {
           Exportar CSV
         </a>
       </div>
-      <DataTable headers={["Grupo", "Receita", "Abandono", "Recuperação", "Conversões"]}>
-        {rows.map((row) => (
-          <tr key={row.group} className="hover:bg-muted/50">
-            <td className="px-4 py-3 font-semibold">{row.group}</td>
-            <td className="px-4 py-3 tabular-nums">{formatCurrency(row.revenue)}</td>
-            <td className="px-4 py-3 tabular-nums">{row.abandonments}</td>
-            <td className="px-4 py-3 tabular-nums">{row.recoveries}</td>
-            <td className="px-4 py-3 tabular-nums">{row.conversions}</td>
-          </tr>
-        ))}
-      </DataTable>
+
+      {rows.length ? (
+        <DataTable headers={["Grupo", "Receita", "Abandono", "Recuperacao", "Conversoes"]}>
+          {rows.map((row) => (
+            <tr key={row.group} className="hover:bg-muted/50">
+              <td className="px-4 py-3 font-semibold">{row.group}</td>
+              <td className="px-4 py-3 tabular-nums">{formatCurrency(row.revenue)}</td>
+              <td className="px-4 py-3 tabular-nums">{row.abandonments}</td>
+              <td className="px-4 py-3 tabular-nums">{row.recoveries}</td>
+              <td className="px-4 py-3 tabular-nums">{row.conversions}</td>
+            </tr>
+          ))}
+        </DataTable>
+      ) : (
+        <EmptyState title="MusclePrime Brasil ainda sem dados reais" description="Os relatorios ficam vazios ate a oferta receber pagamentos, UTMs e eventos reais." />
+      )}
     </div>
   );
 }

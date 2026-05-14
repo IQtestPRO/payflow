@@ -31,7 +31,7 @@ export class UtmifyProvider implements TrackingProvider {
 
     return {
       ok: Boolean(apiKey),
-      status: apiKey ? "Credenciais Utmify presentes" : "Provider mock aguardando credenciais"
+      status: apiKey ? "Credenciais Utmify presentes" : "Utmify aguardando credenciais"
     };
   }
 

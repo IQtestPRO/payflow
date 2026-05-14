@@ -3,9 +3,9 @@
 import { ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { DataTable } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { CustomerRecord } from "@/lib/types";
-import { formatCurrency } from "@/lib/format";
 
 export function CustomersTable({ initialCustomers }: { initialCustomers: CustomerRecord[] }) {
   const [customers, setCustomers] = useState(initialCustomers);
@@ -16,8 +16,17 @@ export function CustomersTable({ initialCustomers }: { initialCustomers: Custome
     if (response.ok) setCustomers((current) => current.map((customer) => (customer.id === id ? json : customer)));
   }
 
+  if (!customers.length) {
+    return (
+      <EmptyState
+        title="Nenhum cliente real registrado ainda"
+        description="Os proximos contatos recebidos pelo WhatsApp serao computados automaticamente com origem, historico e status."
+      />
+    );
+  }
+
   return (
-    <DataTable headers={["Cliente", "Contato", "Origem", "Última oferta", "Compras", "Status", "LGPD"]}>
+    <DataTable headers={["Cliente", "Contato", "Origem", "Ultima oferta", "Compras", "Status", "LGPD"]}>
       {customers.map((customer) => (
         <tr key={customer.id} className="hover:bg-muted/50">
           <td className="px-4 py-3">
@@ -30,7 +39,7 @@ export function CustomersTable({ initialCustomers }: { initialCustomers: Custome
           </td>
           <td className="px-4 py-3">{customer.source ?? "-"}</td>
           <td className="px-4 py-3">{customer.lastOffer ?? "-"}</td>
-          <td className="px-4 py-3 tabular-nums">{customer.totalPurchases} · {formatCurrency(customer.totalPurchases * 197)}</td>
+          <td className="px-4 py-3 tabular-nums">{customer.totalPurchases}</td>
           <td className="px-4 py-3"><StatusBadge status={customer.status} /></td>
           <td className="px-4 py-3">
             <button className="btn-secondary px-3" type="button" onClick={() => anonymize(customer.id)}>

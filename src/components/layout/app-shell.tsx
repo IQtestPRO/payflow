@@ -7,7 +7,6 @@ import {
   Inbox,
   LogOut,
   Megaphone,
-  Package,
   Plug,
   ReceiptText,
   Settings,
@@ -28,7 +27,6 @@ const links = [
   { href: "/getways", label: "Getways", icon: CreditCard },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/ofertas", label: "Ofertas", icon: Boxes },
-  { href: "/produtos", label: "Produtos", icon: Package },
   { href: "/campanhas", label: "Campanhas", icon: Megaphone },
   { href: "/relatorios", label: "Relatórios", icon: ReceiptText },
   { href: "/integracoes", label: "Integrações", icon: Plug },
@@ -37,7 +35,7 @@ const links = [
 
 const navGroups = [
   { label: "Comando", links: links.filter((link) => ["/dashboard", "/inbox", "/recuperacoes", "/pagamentos", "/getways"].includes(link.href)) },
-  { label: "Receita", links: links.filter((link) => ["/clientes", "/ofertas", "/produtos"].includes(link.href)) },
+  { label: "Receita", links: links.filter((link) => ["/clientes", "/ofertas"].includes(link.href)) },
   { label: "Tracking", links: links.filter((link) => ["/campanhas", "/relatorios", "/integracoes", "/configuracoes"].includes(link.href)) }
 ];
 

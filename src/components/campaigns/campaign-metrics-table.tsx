@@ -1,9 +1,19 @@
 import { DataTable } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import type { CampaignRecord } from "@/lib/types";
 
 export function CampaignMetricsTable({ campaigns }: { campaigns: CampaignRecord[] }) {
+  if (!campaigns.length) {
+    return (
+      <EmptyState
+        title="Nenhuma campanha real sincronizada ainda"
+        description="Quando a integracao Meta Ads estiver com token e conta validos, as campanhas reais aparecerao aqui sem dados ficticios."
+      />
+    );
+  }
+
   return (
     <DataTable headers={["Campanha", "Plataforma", "Gasto", "Cliques", "CTR", "CPC", "Receita", "CPA", "ROAS", "Status"]}>
       {campaigns.map((campaign) => (
