@@ -716,7 +716,10 @@ export async function createRecoveryAttempts(attempts: RecoveryAttemptRecord[], 
           status: attempt.status,
           attemptNumber: attempt.attemptNumber,
           templateUsed: attempt.templateUsed,
-          scheduledAt: new Date(attempt.scheduledAt)
+          scheduledAt: new Date(attempt.scheduledAt),
+          sentAt: attempt.sentAt ? new Date(attempt.sentAt) : undefined,
+          convertedAt: attempt.convertedAt ? new Date(attempt.convertedAt) : undefined,
+          errorMessage: attempt.errorMessage
         }))
       });
       return attempts;
@@ -873,6 +876,213 @@ export async function linkPaymentToConversation(
       if (offerId !== undefined) conversation.linkedOfferId = offerId;
       conversation.status = "PAYMENT_PENDING";
       conversation.lastMessageAt = nowIso();
+      return conversation;
+    }
+  );
+}
+
+export async function linkConversationContext(
+  input: {
+    conversationId: string;
+    customer: {
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      document?: string | null;
+    };
+    offerId?: string | null;
+    paymentId?: string | null;
+    actor: { id: string; name: string };
+  },
+  workspaceId = DEFAULT_WORKSPACE_ID
+) {
+  const phone = input.customer.phone?.replace(/\D/g, "") || null;
+  const name = sanitizeText(input.customer.name || "Cliente sem nome", 160);
+  const email = input.customer.email ? sanitizeText(input.customer.email, 180) : null;
+  const document = input.customer.document ? input.customer.document.replace(/\D/g, "") : null;
+  const offerId = input.offerId || null;
+  const paymentId = input.paymentId || null;
+  const note = `Atendente ${input.actor.name} vinculou esta conversa${offerId ? " a uma oferta" : ""}${paymentId ? " e a uma cobranca" : ""}.`;
+
+  return withDatabase(
+    async () =>
+      prisma.$transaction(async (tx) => {
+        const current = await tx.conversation.findFirstOrThrow({
+          where: { id: input.conversationId, workspaceId },
+          include: { customer: true }
+        });
+        const existing = phone ? await tx.customer.findFirst({ where: { workspaceId, phone } }) : null;
+        const customer = existing
+          ? await tx.customer.update({
+              where: { id: existing.id },
+              data: {
+                name,
+                phone,
+                email,
+                document,
+                source: existing.source ?? "WhatsApp",
+                status: existing.status === "NEW" ? "IN_SERVICE" : existing.status
+              }
+            })
+          : await tx.customer.create({
+              data: {
+                workspaceId,
+                name,
+                phone,
+                email,
+                document,
+                source: "WhatsApp",
+                status: "IN_SERVICE"
+              }
+            });
+
+        if (paymentId) {
+          await tx.payment.updateMany({
+            where: { id: paymentId, workspaceId },
+            data: {
+              customerId: customer.id,
+              offerId: offerId ?? undefined
+            }
+          });
+        }
+
+        await tx.message.create({
+          data: {
+            workspaceId,
+            conversationId: current.id,
+            customerId: customer.id,
+            direction: "INTERNAL",
+            body: note,
+            status: "SENT",
+            metadataJson: {
+              attendant: input.actor,
+              action: "conversation_linked",
+              previousCustomerId: current.customerId,
+              offerId,
+              paymentId
+            } as never
+          }
+        });
+
+        const conversation = await tx.conversation.update({
+          where: { id: current.id },
+          data: {
+            customerId: customer.id,
+            assignedToId: input.actor.id,
+            linkedOfferId: offerId,
+            linkedPaymentId: paymentId,
+            status: paymentId ? "PAYMENT_PENDING" : "OPEN",
+            tags: Array.from(new Set([...(current.tags ?? []), "vinculado"])),
+            lastMessageAt: new Date()
+          },
+          include: { customer: true, assignedTo: true, messages: { orderBy: { createdAt: "asc" } } }
+        });
+
+        return mapConversation(conversation);
+      }),
+    () => {
+      const conversation = runtimeStore.conversations.find((item) => item.id === input.conversationId && item.workspaceId === workspaceId);
+      if (!conversation) throw new Error("Conversa nao encontrada");
+      let customer = phone ? runtimeStore.customers.find((item) => item.workspaceId === workspaceId && item.phone === phone) : null;
+      if (!customer) {
+        customer = {
+          id: `cust-${Date.now()}`,
+          workspaceId,
+          name,
+          phone,
+          email,
+          document,
+          tags: [],
+          source: "WhatsApp",
+          lastCampaign: null,
+          lastOffer: null,
+          totalPurchases: 0,
+          status: "IN_SERVICE",
+          doNotContact: false,
+          createdAt: nowIso(),
+          updatedAt: nowIso()
+        };
+        runtimeStore.customers.unshift(customer);
+      } else {
+        Object.assign(customer, { name, phone, email, document, updatedAt: nowIso() });
+      }
+      conversation.customerId = customer.id;
+      conversation.customerName = customer.name;
+      conversation.customerPhone = customer.phone;
+      conversation.assignedToName = input.actor.name;
+      conversation.linkedOfferId = offerId;
+      conversation.linkedPaymentId = paymentId;
+      conversation.status = paymentId ? "PAYMENT_PENDING" : "OPEN";
+      conversation.tags = Array.from(new Set([...(conversation.tags ?? []), "vinculado"]));
+      conversation.lastMessageAt = nowIso();
+      conversation.messages.push({
+        id: `msg-${Date.now()}`,
+        workspaceId,
+        conversationId: conversation.id,
+        customerId: customer.id,
+        direction: "INTERNAL",
+        body: note,
+        status: "SENT",
+        metadataJson: { attendant: input.actor, action: "conversation_linked", offerId, paymentId },
+        createdAt: nowIso()
+      });
+      return conversation;
+    }
+  );
+}
+
+export async function resolveConversation(
+  conversationId: string,
+  actor: { id: string; name: string },
+  workspaceId = DEFAULT_WORKSPACE_ID
+) {
+  const note = `Atendente ${actor.name} resolveu este atendimento.`;
+
+  return withDatabase(
+    async () =>
+      prisma.$transaction(async (tx) => {
+        const current = await tx.conversation.findFirstOrThrow({
+          where: { id: conversationId, workspaceId }
+        });
+        await tx.message.create({
+          data: {
+            workspaceId,
+            conversationId: current.id,
+            customerId: current.customerId,
+            direction: "INTERNAL",
+            body: note,
+            status: "SENT",
+            metadataJson: { attendant: actor, action: "conversation_resolved" } as never
+          }
+        });
+        const conversation = await tx.conversation.update({
+          where: { id: current.id },
+          data: {
+            status: "RESOLVED",
+            assignedToId: actor.id,
+            lastMessageAt: new Date()
+          },
+          include: { customer: true, assignedTo: true, messages: { orderBy: { createdAt: "asc" } } }
+        });
+        return mapConversation(conversation);
+      }),
+    () => {
+      const conversation = runtimeStore.conversations.find((item) => item.id === conversationId && item.workspaceId === workspaceId);
+      if (!conversation) throw new Error("Conversa nao encontrada");
+      conversation.status = "RESOLVED";
+      conversation.assignedToName = actor.name;
+      conversation.lastMessageAt = nowIso();
+      conversation.messages.push({
+        id: `msg-${Date.now()}`,
+        workspaceId,
+        conversationId: conversation.id,
+        customerId: conversation.customerId,
+        direction: "INTERNAL",
+        body: note,
+        status: "SENT",
+        metadataJson: { attendant: actor, action: "conversation_resolved" },
+        createdAt: nowIso()
+      });
       return conversation;
     }
   );

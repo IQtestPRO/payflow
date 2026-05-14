@@ -2,6 +2,7 @@ import type { CustomerRecord, OfferRecord, PaymentRecord, PaymentStatus, Recover
 import { addMinutes, nowIso } from "@/lib/utils";
 import { getWhatsAppProvider } from "@/providers/whatsapp";
 import { getRecoveryQueue } from "@/server/automation/recovery-queue";
+import { sendConversationMediaMessage, sendConversationMessage, type MessageActor } from "@/server/services/messaging";
 import {
   appendOutboundMessage,
   cancelRecoveryForPayment,
@@ -15,6 +16,9 @@ import {
   markRecoveryConvertedForPayment,
   updateRecoveryAttempt
 } from "@/server/repositories/payflow-repository";
+import { toDataURL } from "qrcode";
+
+type ManualRecoveryArtifact = "pix_copy_paste" | "qr_code" | "checkout_url";
 
 export const recoverablePaymentStatuses: PaymentStatus[] = [
   "PENDING",
@@ -186,6 +190,118 @@ export async function sendRecoveryForPaymentNow(paymentId: string, workspaceId?:
   return { message, attemptId: attempt.id, providerMessageId: result.providerMessageId };
 }
 
+export async function sendManualRecoveryArtifact(
+  input: { paymentId: string; artifact: ManualRecoveryArtifact },
+  workspaceId?: string,
+  actor?: MessageActor
+) {
+  const payment = await findPayment(input.paymentId, workspaceId);
+  if (!payment) throw new Error("Pagamento nao encontrado");
+
+  const customer = await findCustomer(payment.customerId, payment.workspaceId);
+  const offer = await findOffer(payment.offerId, payment.workspaceId);
+  if (!customer?.phone) throw new Error("Cliente sem WhatsApp");
+  if (customer.doNotContact) throw new Error("Cliente marcou opt-out");
+  if (!isPaymentRecoverable(payment, offer)) throw new Error("Pagamento nao esta em status recuperavel");
+
+  const conversation = await ensureConversationForCustomer(customer, payment.workspaceId);
+  const attempts = await listRecoveryAttempts(payment.workspaceId);
+  const attemptNumber = attempts.filter((attempt) => attempt.paymentId === payment.id).length + 1;
+  const scheduledAt = nowIso();
+
+  const sendResult = await sendRecoveryArtifactMessage({
+    conversationId: conversation.id,
+    payment,
+    artifact: input.artifact,
+    workspaceId: payment.workspaceId,
+    actor
+  });
+
+  const attempt: RecoveryAttemptRecord = {
+    id: `attempt-${Date.now()}`,
+    workspaceId: payment.workspaceId,
+    recoveryFlowId: null,
+    paymentId: payment.id,
+    customerId: customer.id,
+    conversationId: conversation.id,
+    status: "SENT",
+    attemptNumber,
+    templateUsed: `manual:${input.artifact}`,
+    scheduledAt,
+    sentAt: nowIso(),
+    convertedAt: null,
+    errorMessage: null,
+    customerName: customer.name,
+    customerPhone: customer.phone,
+    offerName: offer?.name,
+    paymentStatus: payment.status,
+    amount: payment.amount
+  };
+
+  await createRecoveryAttempts([attempt], payment.workspaceId);
+  return { ...sendResult, attempt };
+}
+
+async function sendRecoveryArtifactMessage(input: {
+  conversationId: string;
+  payment: PaymentRecord;
+  artifact: ManualRecoveryArtifact;
+  workspaceId: string;
+  actor?: MessageActor;
+}) {
+  if (input.artifact === "pix_copy_paste") {
+    if (!input.payment.pixCode) throw new Error("Pagamento sem Pix copia e cola");
+    return {
+      ...(await sendConversationMessage(input.conversationId, input.payment.pixCode, input.workspaceId, input.actor)),
+      sentAs: "text" as const
+    };
+  }
+
+  if (input.artifact === "checkout_url") {
+    if (!input.payment.checkoutUrl) throw new Error("Pagamento sem link de checkout");
+    return {
+      ...(await sendConversationMessage(input.conversationId, input.payment.checkoutUrl, input.workspaceId, input.actor)),
+      sentAs: "text" as const
+    };
+  }
+
+  if (!input.payment.pixCode) throw new Error("Pagamento sem Pix para gerar QR Code");
+  const qrCodeDataUrl = await toDataURL(input.payment.pixCode, { margin: 2, width: 320 });
+  const caption = `QR Code Pix - ${input.payment.offerName ?? "cobranca PayFlow"}\nValor: ${formatRecoveryCurrency(input.payment.amount, input.payment.currency)}`;
+
+  try {
+    return {
+      ...(await sendConversationMediaMessage(
+        input.conversationId,
+        {
+          caption,
+          mediaBase64: qrCodeDataUrl,
+          fileName: `payflow-recovery-${input.payment.providerPaymentId}.png`,
+          metadata: {
+            paymentId: input.payment.id,
+            providerPaymentId: input.payment.providerPaymentId,
+            artifact: input.artifact,
+            recovery: "manual"
+          }
+        },
+        input.workspaceId,
+        input.actor
+      )),
+      sentAs: "media" as const
+    };
+  } catch {
+    return {
+      ...(await sendConversationMessage(
+        input.conversationId,
+        `${caption}\n\nNao consegui enviar a imagem do QR automaticamente por este provider. Envie o Pix copia e cola em separado.`,
+        input.workspaceId,
+        input.actor
+      )),
+      sentAs: "text" as const
+    };
+  }
+}
+
 export async function cancelRecoveryBecausePaid(payment: Pick<PaymentRecord, "id" | "workspaceId">) {
   await markRecoveryConvertedForPayment(payment.id, payment.workspaceId);
   await cancelRecoveryForPayment(payment.id, payment.workspaceId);
@@ -197,4 +313,8 @@ export async function pauseRecoveryForPayment(paymentId: string, workspaceId?: s
   await cancelRecoveryForPayment(payment.id, payment.workspaceId);
   await getRecoveryQueue().cancelPayment(payment.id);
   return { ok: true };
+}
+
+function formatRecoveryCurrency(value: number, currency = "BRL") {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
 }

@@ -1,15 +1,22 @@
 "use client";
 
-import { CheckCircle2, CreditCard, Link2, RefreshCcw, Send, Tag, UserRound } from "lucide-react";
+import { CheckCircle2, CreditCard, Link2, Loader2, RefreshCcw, Send, Tag, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import { InboxChargePanel } from "@/components/inbox/inbox-charge-panel";
 import { ConversationList } from "@/components/inbox/conversation-list";
+import { InboxChargePanel } from "@/components/inbox/inbox-charge-panel";
+import { InboxLinkPanel } from "@/components/inbox/inbox-link-panel";
 import { MessageBubble } from "@/components/inbox/message-bubble";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { ConversationRecord, ConversationStatus, MessageRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+type ConversationApiResponse = {
+  ok?: boolean;
+  conversation?: ConversationRecord;
+  error?: string;
+};
 
 export function InboxClient({ initialConversations }: { initialConversations: ConversationRecord[] }) {
   const [conversations, setConversations] = useState(initialConversations);
@@ -18,8 +25,11 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
   const [search, setSearch] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const [chargePanelOpen, setChargePanelOpen] = useState(false);
+  const [linkPanelOpen, setLinkPanelOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -40,11 +50,17 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
   const priority = selected ? priorityForStatus(selected.status) : null;
   const activeAttendant = selected ? selected.assignedToName ?? readLastAttendantName(selected.messages) : null;
 
+  function upsertConversation(next: ConversationRecord) {
+    setConversations((current) => current.map((conversation) => (conversation.id === next.id ? next : conversation)));
+    setSelectedId(next.id);
+  }
+
   async function send(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     if (!selected || !body.trim()) return;
     setSending(true);
     setError(null);
+    setNotice(null);
 
     try {
       const response = await fetch("/api/messages/send", {
@@ -56,7 +72,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
 
       if (!response.ok || !json.message) {
         const staleConversation = json.error?.includes("Conversa");
-        setError(staleConversation ? "Essa conversa ficou desatualizada. Recarregue a inbox e tente responder novamente." : json.error ?? "Não foi possível enviar.");
+        setError(staleConversation ? "Essa conversa ficou desatualizada. Recarregue a inbox e tente responder novamente." : json.error ?? "Nao foi possivel enviar.");
         return;
       }
 
@@ -66,6 +82,7 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
             ? {
                 ...conversation,
                 status: "WAITING_CUSTOMER",
+                assignedToName: readMessageAttendantName(json.message) ?? conversation.assignedToName,
                 lastMessageAt: json.message?.createdAt,
                 messages: [...conversation.messages, json.message as MessageRecord]
               }
@@ -74,9 +91,34 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
       );
       setBody("");
     } catch {
-      setError("Não foi possível conectar ao servidor. Recarregue a inbox e tente novamente.");
+      setError("Nao foi possivel conectar ao servidor. Recarregue a inbox e tente novamente.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function resolveSelected() {
+    if (!selected || resolving) return;
+    setResolving(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch("/api/inbox/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: selected.id })
+      });
+      const json = (await response.json().catch(() => ({}))) as ConversationApiResponse;
+      if (!response.ok || !json.conversation) throw new Error(json.error ?? "Nao foi possivel resolver a conversa.");
+      upsertConversation(json.conversation);
+      setChargePanelOpen(false);
+      setLinkPanelOpen(false);
+      setNotice("Atendimento resolvido e registrado no historico.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel resolver a conversa.");
+    } finally {
+      setResolving(false);
     }
   }
 
@@ -88,6 +130,9 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
         onSelect={(conversation) => {
           setSelectedId(conversation.id);
           setChargePanelOpen(false);
+          setLinkPanelOpen(false);
+          setError(null);
+          setNotice(null);
         }}
         filter={filter}
         onFilter={setFilter}
@@ -108,15 +153,33 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
                   <p className="mt-1 text-sm text-muted-foreground">{selected.customerPhone}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button className={cn("btn-secondary px-3", chargePanelOpen && "border-primary/45 bg-blue-50 text-primary")} type="button" onClick={() => setChargePanelOpen((current) => !current)}>
+                  <button
+                    className={cn("btn-secondary px-3", chargePanelOpen && "border-primary/45 bg-blue-50 text-primary")}
+                    type="button"
+                    onClick={() => {
+                      setChargePanelOpen((current) => !current);
+                      setLinkPanelOpen(false);
+                      setError(null);
+                      setNotice(null);
+                    }}
+                  >
                     <CreditCard className="h-4 w-4" aria-hidden="true" />
-                    Cobrança
+                    Cobranca
                   </button>
-                  <button className="btn-secondary px-3" type="button">
-                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                    Resolver
+                  <button className="btn-secondary px-3" type="button" onClick={resolveSelected} disabled={resolving || selected.status === "RESOLVED"} aria-busy={resolving}>
+                    {resolving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+                    {resolving ? "Resolvendo..." : selected.status === "RESOLVED" ? "Resolvido" : "Resolver"}
                   </button>
-                  <button className="btn-secondary px-3" type="button">
+                  <button
+                    className={cn("btn-secondary px-3", linkPanelOpen && "border-primary/45 bg-blue-50 text-primary")}
+                    type="button"
+                    onClick={() => {
+                      setLinkPanelOpen((current) => !current);
+                      setChargePanelOpen(false);
+                      setError(null);
+                      setNotice(null);
+                    }}
+                  >
                     <Link2 className="h-4 w-4" aria-hidden="true" />
                     Vincular
                   </button>
@@ -150,6 +213,11 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
                   {activeAttendant ?? "Sem atendente"}
                 </span>
               </div>
+
+              <div className="mt-3 grid gap-2">
+                {error ? <p className="rounded-md bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
+                {notice ? <p className="rounded-md bg-emerald-50 p-3 text-sm font-medium text-emerald-700">{notice}</p> : null}
+              </div>
             </header>
 
             <InboxChargePanel
@@ -176,12 +244,24 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
                       ? {
                           ...conversation,
                           status: "WAITING_CUSTOMER",
+                          assignedToName: readMessageAttendantName(message) ?? conversation.assignedToName,
                           lastMessageAt: message.createdAt,
                           messages: [...conversation.messages, message]
                         }
                       : conversation
                   )
                 );
+              }}
+            />
+
+            <InboxLinkPanel
+              conversation={selected}
+              open={linkPanelOpen}
+              onClose={() => setLinkPanelOpen(false)}
+              onLinked={(conversation) => {
+                upsertConversation(conversation);
+                setLinkPanelOpen(false);
+                setNotice("Conversa vinculada ao cliente e ao contexto selecionado.");
               }}
             />
 
@@ -192,7 +272,6 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
             </div>
 
             <footer className="border-t border-border/80 bg-white/[0.96] p-4 backdrop-blur">
-              {error ? <p className="mb-3 rounded-md bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
               <form onSubmit={send} className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <textarea className="field min-h-24 resize-none py-3" value={body} onChange={(event) => setBody(event.target.value)} placeholder="Digite sua resposta pelo WhatsApp" />
                 <button type="submit" className={cn("btn-primary min-w-32 md:self-end", sending && "opacity-70")} disabled={sending} aria-busy={sending}>
@@ -215,14 +294,19 @@ export function InboxClient({ initialConversations }: { initialConversations: Co
 function readLastAttendantName(messages: MessageRecord[]) {
   for (const message of [...messages].reverse()) {
     if (message.direction !== "OUTBOUND") continue;
-    const metadata = message.metadataJson;
-    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) continue;
-    const attendant = (metadata as Record<string, unknown>).attendant;
-    if (!attendant || typeof attendant !== "object" || Array.isArray(attendant)) continue;
-    const name = (attendant as Record<string, unknown>).name;
-    if (typeof name === "string" && name.trim()) return name.trim();
+    const name = readMessageAttendantName(message);
+    if (name) return name;
   }
   return null;
+}
+
+function readMessageAttendantName(message?: MessageRecord) {
+  const metadata = message?.metadataJson;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const attendant = (metadata as Record<string, unknown>).attendant;
+  if (!attendant || typeof attendant !== "object" || Array.isArray(attendant)) return null;
+  const name = (attendant as Record<string, unknown>).name;
+  return typeof name === "string" && name.trim() ? name.trim() : null;
 }
 
 function priorityForStatus(status: ConversationStatus) {
