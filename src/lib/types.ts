@@ -98,6 +98,11 @@ export type CustomerRecord = {
   source?: string | null;
   lastCampaign?: string | null;
   lastOffer?: string | null;
+  ctwaClid?: string | null;
+  ctwaSourceId?: string | null;
+  ctwaSourceUrl?: string | null;
+  ctwaHeadline?: string | null;
+  ctwaCapturedAt?: string | null;
   totalPurchases: number;
   status: CustomerStatus;
   doNotContact: boolean;

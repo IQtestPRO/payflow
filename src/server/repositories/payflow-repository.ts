@@ -580,11 +580,18 @@ export async function registerInboundWhatsAppMessage(input: {
   name?: string | null;
   body: string;
   providerMessageId?: string | null;
+  referral?: {
+    ctwaClid?: string | null;
+    sourceId?: string | null;
+    sourceUrl?: string | null;
+    headline?: string | null;
+  } | null;
   metadataJson?: unknown;
 }) {
   const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
   const phone = input.phone.replace(/\D/g, "");
   const body = sanitizeText(input.body, 4000);
+  const referralData = buildCustomerReferralData(input.referral);
 
   return withDatabase(
     async () => {
@@ -596,7 +603,16 @@ export async function registerInboundWhatsAppMessage(input: {
             phone,
             name: input.name || `WhatsApp ${phone.slice(-4)}`,
             status: "IN_SERVICE",
-            source: "WhatsApp"
+            source: referralData.ctwaClid ? "WhatsApp CTWA" : "WhatsApp",
+            ...referralData
+          }
+        });
+      } else if (referralData.ctwaClid && !customer.ctwaClid) {
+        customer = await prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            ...referralData,
+            source: customer.source ?? "WhatsApp CTWA"
           }
         });
       }
@@ -655,6 +671,11 @@ export async function registerInboundWhatsAppMessage(input: {
           source: "WhatsApp",
           lastCampaign: null,
           lastOffer: null,
+          ctwaClid: referralData.ctwaClid ?? null,
+          ctwaSourceId: referralData.ctwaSourceId ?? null,
+          ctwaSourceUrl: referralData.ctwaSourceUrl ?? null,
+          ctwaHeadline: referralData.ctwaHeadline ?? null,
+          ctwaCapturedAt: referralData.ctwaCapturedAt?.toISOString() ?? null,
           totalPurchases: 0,
           status: "IN_SERVICE",
           doNotContact: false,
@@ -662,6 +683,16 @@ export async function registerInboundWhatsAppMessage(input: {
           updatedAt: nowIso()
         };
         runtimeStore.customers.unshift(customer);
+      } else if (referralData.ctwaClid && !customer.ctwaClid) {
+        Object.assign(customer, {
+          ctwaClid: referralData.ctwaClid,
+          ctwaSourceId: referralData.ctwaSourceId ?? null,
+          ctwaSourceUrl: referralData.ctwaSourceUrl ?? null,
+          ctwaHeadline: referralData.ctwaHeadline ?? null,
+          ctwaCapturedAt: referralData.ctwaCapturedAt?.toISOString() ?? nowIso(),
+          source: customer.source ?? "WhatsApp CTWA",
+          updatedAt: nowIso()
+        });
       }
 
       let conversation = runtimeStore.conversations.find(
@@ -1115,7 +1146,12 @@ export async function createOrUpdateCustomer(
         email: input.email,
         document: input.document,
         source: input.source,
-        status: input.status
+        status: input.status,
+        ctwaClid: existing?.ctwaClid ? undefined : input.ctwaClid,
+        ctwaSourceId: existing?.ctwaSourceId ? undefined : input.ctwaSourceId,
+        ctwaSourceUrl: existing?.ctwaSourceUrl ? undefined : input.ctwaSourceUrl,
+        ctwaHeadline: existing?.ctwaHeadline ? undefined : input.ctwaHeadline,
+        ctwaCapturedAt: existing?.ctwaCapturedAt ? undefined : input.ctwaCapturedAt ? new Date(input.ctwaCapturedAt) : undefined
       };
       const customer = existing
         ? await prisma.customer.update({ where: { id: existing.id }, data })
@@ -1136,6 +1172,11 @@ export async function createOrUpdateCustomer(
           source: input.source ?? null,
           lastCampaign: input.lastCampaign ?? null,
           lastOffer: input.lastOffer ?? null,
+          ctwaClid: input.ctwaClid ?? null,
+          ctwaSourceId: input.ctwaSourceId ?? null,
+          ctwaSourceUrl: input.ctwaSourceUrl ?? null,
+          ctwaHeadline: input.ctwaHeadline ?? null,
+          ctwaCapturedAt: input.ctwaCapturedAt ?? null,
           totalPurchases: input.totalPurchases ?? 0,
           status: input.status ?? "NEW",
           doNotContact: Boolean(input.doNotContact),
@@ -1144,11 +1185,38 @@ export async function createOrUpdateCustomer(
         };
         runtimeStore.customers.unshift(customer);
       } else {
-        Object.assign(customer, input, { phone, updatedAt: nowIso() });
+        Object.assign(customer, {
+          ...input,
+          phone,
+          ctwaClid: customer.ctwaClid ?? input.ctwaClid ?? null,
+          ctwaSourceId: customer.ctwaSourceId ?? input.ctwaSourceId ?? null,
+          ctwaSourceUrl: customer.ctwaSourceUrl ?? input.ctwaSourceUrl ?? null,
+          ctwaHeadline: customer.ctwaHeadline ?? input.ctwaHeadline ?? null,
+          ctwaCapturedAt: customer.ctwaCapturedAt ?? input.ctwaCapturedAt ?? null,
+          updatedAt: nowIso()
+        });
       }
       return customer;
     }
   );
+}
+
+function buildCustomerReferralData(referral?: {
+  ctwaClid?: string | null;
+  sourceId?: string | null;
+  sourceUrl?: string | null;
+  headline?: string | null;
+} | null) {
+  const ctwaClid = sanitizeText(referral?.ctwaClid ?? "", 700);
+  if (!ctwaClid) return {};
+
+  return {
+    ctwaClid,
+    ctwaSourceId: sanitizeText(referral?.sourceId ?? "", 180) || null,
+    ctwaSourceUrl: sanitizeText(referral?.sourceUrl ?? "", 700) || null,
+    ctwaHeadline: sanitizeText(referral?.headline ?? "", 260) || null,
+    ctwaCapturedAt: new Date()
+  };
 }
 
 export async function recordWebhookEvent(input: {
@@ -1502,6 +1570,11 @@ function mapCustomer(item: {
   source?: string | null;
   lastCampaign?: string | null;
   lastOffer?: string | null;
+  ctwaClid?: string | null;
+  ctwaSourceId?: string | null;
+  ctwaSourceUrl?: string | null;
+  ctwaHeadline?: string | null;
+  ctwaCapturedAt?: Date | string | null;
   totalPurchases?: number;
   status: string;
   doNotContact?: boolean;
@@ -1519,6 +1592,11 @@ function mapCustomer(item: {
     source: item.source,
     lastCampaign: item.lastCampaign,
     lastOffer: item.lastOffer,
+    ctwaClid: item.ctwaClid,
+    ctwaSourceId: item.ctwaSourceId,
+    ctwaSourceUrl: item.ctwaSourceUrl,
+    ctwaHeadline: item.ctwaHeadline,
+    ctwaCapturedAt: asIso(item.ctwaCapturedAt),
     totalPurchases: item.totalPurchases ?? 0,
     status: item.status as CustomerRecord["status"],
     doNotContact: item.doNotContact ?? false,

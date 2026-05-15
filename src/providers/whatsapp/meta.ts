@@ -1,4 +1,4 @@
-import type { ParsedWhatsAppMessage, WhatsAppProvider, WhatsAppSendInput, WhatsAppSendResult, WhatsAppTemplateSendInput } from "@/providers/whatsapp/types";
+import type { ParsedWhatsAppMessage, WhatsAppProvider, WhatsAppReferral, WhatsAppSendInput, WhatsAppSendResult, WhatsAppTemplateSendInput } from "@/providers/whatsapp/types";
 
 export class MetaWhatsAppProvider implements WhatsAppProvider {
   name = "meta";
@@ -70,7 +70,7 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
       (entry.changes ?? []).flatMap((change) => {
         const value = change.value as {
           contacts?: Array<{ profile?: { name?: string }; wa_id?: string }>;
-          messages?: Array<{ id?: string; from?: string; text?: { body?: string }; type?: string }>;
+          messages?: Array<{ id?: string; from?: string; text?: { body?: string }; type?: string; referral?: Record<string, unknown> }>;
         };
 
         return (value.messages ?? [])
@@ -81,6 +81,7 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
             body: message.text?.body ?? "",
             providerMessageId: message.id,
             eventType: "message",
+            referral: mapMetaReferral(message.referral),
             raw: payload
           }));
       })
@@ -93,4 +94,26 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
       status: process.env.WHATSAPP_ACCESS_TOKEN ? "Credenciais presentes" : "Configure WHATSAPP_ACCESS_TOKEN e WHATSAPP_PHONE_NUMBER_ID"
     };
   }
+}
+
+function mapMetaReferral(referral?: Record<string, unknown>): WhatsAppReferral | null {
+  if (!referral) return null;
+  const ctwaClid = stringValue(referral.ctwa_clid) ?? stringValue(referral.ctwaClid);
+  const sourceId = stringValue(referral.source_id) ?? stringValue(referral.sourceId);
+  const sourceUrl = stringValue(referral.source_url) ?? stringValue(referral.sourceUrl);
+  if (!ctwaClid && !sourceId && !sourceUrl) return null;
+
+  return {
+    ctwaClid,
+    sourceId,
+    sourceUrl,
+    headline: stringValue(referral.headline),
+    body: stringValue(referral.body),
+    mediaType: stringValue(referral.media_type) ?? stringValue(referral.mediaType),
+    imageUrl: stringValue(referral.image_url) ?? stringValue(referral.imageUrl)
+  };
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }

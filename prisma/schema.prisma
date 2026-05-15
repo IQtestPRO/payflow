@@ -257,6 +257,11 @@ model Customer {
   source        String?
   lastCampaign  String?
   lastOffer     String?
+  ctwaClid      String?
+  ctwaSourceId  String?
+  ctwaSourceUrl String?
+  ctwaHeadline  String?
+  ctwaCapturedAt DateTime?
   totalPurchases Int            @default(0)
   status        CustomerStatus  @default(NEW)
   doNotContact  Boolean         @default(false)
@@ -271,6 +276,7 @@ model Customer {
 
   @@index([workspaceId, phone])
   @@index([workspaceId, email])
+  @@index([workspaceId, ctwaClid])
 }
 
 model Conversation {

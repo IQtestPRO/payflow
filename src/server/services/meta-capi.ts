@@ -1,41 +1,84 @@
+import { createHash } from "crypto";
 import { logger } from "@/lib/logger";
 
+export type MetaCapiEventName =
+  | "Contact"
+  | "Lead"
+  | "Schedule"
+  | "Purchase"
+  | "SubmitApplication"
+  | "CompleteRegistration"
+  | "InitiateCheckout"
+  | "PageView";
+
 type MetaCapiEventInput = {
-  eventName: "Contact" | "Lead" | "PageView";
+  eventName: MetaCapiEventName;
   eventId: string;
-  eventSourceUrl: string;
-  request: Request;
+  actionSource?: "website" | "business_messaging";
+  messagingChannel?: "whatsapp";
+  eventSourceUrl?: string;
+  request?: Request;
   fbclid?: string | null;
+  ctwaClid?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  externalId?: string | null;
+  pageId?: string | null;
   customData?: Record<string, unknown>;
 };
 
-const DEFAULT_GRAPH_API_VERSION = "v25.0";
+type MetaBusinessMessagingInput = Omit<MetaCapiEventInput, "actionSource" | "messagingChannel" | "eventSourceUrl" | "request" | "fbclid"> & {
+  ctwaClid?: string | null;
+};
 
-export async function sendMetaCapiEvent(input: MetaCapiEventInput) {
-  const pixelId = process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID;
-  const accessToken = process.env.META_CAPI_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN;
+const DEFAULT_GRAPH_API_VERSION = "v21.0";
+const PARTNER_AGENT = "payflow_capi_business_messaging_v1";
 
-  if (!pixelId || !accessToken) {
-    return { ok: false, status: "Meta CAPI nao configurado" };
+export async function sendMetaBusinessMessagingEvent(input: MetaBusinessMessagingInput) {
+  if (!input.ctwaClid) {
+    return { ok: false, skipped: true, status: "Meta CAPI Business Messaging ignorado: ctwa_clid ausente" };
   }
 
+  return sendMetaCapiEvent({
+    ...input,
+    actionSource: "business_messaging",
+    messagingChannel: "whatsapp",
+    pageId: input.pageId ?? process.env.META_PAGE_ID
+  });
+}
+
+export async function sendMetaCapiEvent(input: MetaCapiEventInput) {
+  const datasetId = process.env.META_DATASET_ID || process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const accessToken = process.env.META_CAPI_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN;
+
+  if (!datasetId || !accessToken) {
+    return { ok: false, skipped: true, status: "Meta CAPI nao configurado" };
+  }
+
+  const actionSource = input.actionSource ?? "website";
   const graphVersion = process.env.META_GRAPH_API_VERSION || DEFAULT_GRAPH_API_VERSION;
-  const endpoint = new URL(`https://graph.facebook.com/${graphVersion}/${pixelId}/events`);
+  const endpoint = new URL(`https://graph.facebook.com/${graphVersion}/${datasetId}/events`);
   endpoint.searchParams.set("access_token", accessToken);
 
+  const event: Record<string, unknown> = {
+    event_name: input.eventName,
+    event_time: Math.floor(Date.now() / 1000),
+    event_id: input.eventId,
+    action_source: actionSource,
+    user_data: buildUserData(input),
+    custom_data: input.customData
+  };
+
+  if (actionSource === "business_messaging") {
+    event.messaging_channel = input.messagingChannel ?? "whatsapp";
+  } else if (input.eventSourceUrl) {
+    event.event_source_url = input.eventSourceUrl;
+  }
+
   const payload = {
-    data: [
-      {
-        event_name: input.eventName,
-        event_time: Math.floor(Date.now() / 1000),
-        event_id: input.eventId,
-        action_source: "website",
-        event_source_url: input.eventSourceUrl,
-        user_data: buildUserData(input.request, input.fbclid),
-        custom_data: input.customData
-      }
-    ],
-    test_event_code: process.env.META_CAPI_TEST_EVENT_CODE || undefined
+    data: [event],
+    partner_agent: PARTNER_AGENT,
+    test_event_code: process.env.META_CAPI_TEST_EVENT_CODE || process.env.META_TEST_EVENT_CODE || undefined
   };
 
   try {
@@ -46,7 +89,7 @@ export async function sendMetaCapiEvent(input: MetaCapiEventInput) {
       },
       body: JSON.stringify(payload),
       cache: "no-store",
-      signal: AbortSignal.timeout(1800)
+      signal: AbortSignal.timeout(2200)
     });
     const json = await response.json().catch(() => null);
 
@@ -55,32 +98,55 @@ export async function sendMetaCapiEvent(input: MetaCapiEventInput) {
         status: response.status,
         eventName: input.eventName,
         eventId: input.eventId,
+        actionSource,
         error: readMetaError(json)
       });
-      return { ok: false, status: `Meta CAPI respondeu ${response.status}` };
+      return { ok: false, skipped: false, status: `Meta CAPI respondeu ${response.status}` };
     }
 
-    return { ok: true, status: "Meta CAPI enviado" };
+    return { ok: true, skipped: false, status: "Meta CAPI enviado", response: json };
   } catch (error) {
     logger.warn("Falha nao bloqueante no Meta CAPI", {
       eventName: input.eventName,
       eventId: input.eventId,
+      actionSource,
       error: error instanceof Error ? error.message : "Erro desconhecido"
     });
-    return { ok: false, status: "Falha ao enviar Meta CAPI" };
+    return { ok: false, skipped: false, status: "Falha ao enviar Meta CAPI" };
   }
 }
 
-function buildUserData(request: Request, fbclid?: string | null) {
-  const userData: Record<string, string> = {};
-  const ip = readClientIp(request);
-  const userAgent = request.headers.get("user-agent")?.trim();
+function buildUserData(input: MetaCapiEventInput) {
+  const userData: Record<string, string | string[]> = {};
+  const ip = input.request ? readClientIp(input.request) : null;
+  const userAgent = input.request?.headers.get("user-agent")?.trim();
+  const phone = normalizePhone(input.phone);
+  const email = normalizeEmail(input.email);
+  const externalId = input.externalId?.trim();
 
   if (ip) userData.client_ip_address = ip;
   if (userAgent) userData.client_user_agent = userAgent;
-  if (fbclid) userData.fbc = `fb.1.${Date.now()}.${fbclid}`;
+  if (input.fbclid) userData.fbc = `fb.1.${Date.now()}.${input.fbclid}`;
+  if (input.ctwaClid) userData.ctwa_clid = input.ctwaClid;
+  if (input.pageId) userData.page_id = input.pageId;
+  if (phone) userData.ph = [hashSHA256(phone)];
+  if (email) userData.em = [hashSHA256(email)];
+  if (externalId) userData.external_id = [hashSHA256(externalId)];
 
   return userData;
+}
+
+function hashSHA256(value: string) {
+  return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
+
+function normalizePhone(value?: string | null) {
+  return value?.replace(/\D/g, "") || null;
+}
+
+function normalizeEmail(value?: string | null) {
+  const email = value?.trim().toLowerCase();
+  return email && email.includes("@") ? email : null;
 }
 
 function readClientIp(request: Request) {

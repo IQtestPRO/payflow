@@ -31,11 +31,13 @@ Providers reais entram por contrato isolado. Duplos locais ficam restritos a tes
 
 - `GET /api/webhooks/whatsapp`: validacao de webhook da Meta por `WHATSAPP_VERIFY_TOKEN`.
 - `POST /api/webhooks/whatsapp`: recebe mensagens, cria cliente/conversa/mensagem e marca como nao respondida.
+  - Quando o payload traz `ctwa_clid`, o identificador CTWA e salvo no cliente e dispara `Contact` via Meta CAPI Business Messaging.
 - `POST /api/integrations/whatsapp/evolution/create-instance`: cria instancia Evolution.
 - `POST /api/integrations/whatsapp/evolution/connect`: solicita QR code/codigo de pareamento.
 - `POST /api/integrations/whatsapp/evolution/webhook`: registra o webhook do PayFlow na instancia Evolution.
 - `POST /api/webhooks/umbrella`: cria/atualiza cliente e pagamento, agenda recuperacao quando permitido e converte/cancela quando pago.
 - `POST /api/webhooks/utmify`: registra evento de tracking e associa cliente/pagamento/oferta quando informado.
+- Meta CAPI Business Messaging dispara `Lead` ao gerar cobranca no Inbox e `Purchase` quando um gateway confirma pagamento de cliente com `ctwa_clid`.
 
 Quando secrets estao configurados, endpoints sensiveis validam assinatura HMAC.
 

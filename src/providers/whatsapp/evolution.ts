@@ -2,6 +2,7 @@ import { appUrl } from "@/lib/env";
 import { toDataURL } from "qrcode";
 import type {
   ParsedWhatsAppMessage,
+  WhatsAppReferral,
   WhatsAppMediaSendInput,
   WhatsAppProvider,
   WhatsAppSendInput,
@@ -148,6 +149,7 @@ export class EvolutionWhatsAppProvider implements WhatsAppProvider {
           body,
           providerMessageId: item.key?.id ?? null,
           eventType,
+          referral: extractWhatsAppReferral(item) ?? extractWhatsAppReferral(payload),
           raw: payload
         };
       })
@@ -390,6 +392,60 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function readString(record: Record<string, unknown>, key: string) {
   const value = record[key];
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function extractWhatsAppReferral(value: unknown): WhatsAppReferral | null {
+  const record = findReferralRecord(value, 0);
+  if (!record) return null;
+
+  const ctwaClid = readString(record, "ctwa_clid") ?? readString(record, "ctwaClid");
+  const sourceId = readString(record, "source_id") ?? readString(record, "sourceId") ?? readString(record, "sourceAdId");
+  const sourceUrl = readString(record, "source_url") ?? readString(record, "sourceUrl");
+  const headline = readString(record, "headline") ?? readString(record, "title");
+  const body = readString(record, "body") ?? readString(record, "description");
+  const mediaType = readString(record, "media_type") ?? readString(record, "mediaType");
+  const imageUrl = readString(record, "image_url") ?? readString(record, "thumbnailUrl") ?? readString(record, "jpegThumbnail");
+
+  if (!ctwaClid && !sourceId && !sourceUrl) return null;
+  return { ctwaClid, sourceId, sourceUrl, headline, body, mediaType, imageUrl };
+}
+
+function findReferralRecord(value: unknown, depth: number): Record<string, unknown> | null {
+  if (depth > 8 || !value || typeof value !== "object") return null;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findReferralRecord(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (hasReferralSignal(record)) return record;
+
+  for (const key of ["referral", "externalAdReply", "contextInfo", "messageContextInfo", "quotedMessage", "message", "key", "data"]) {
+    const found = findReferralRecord(record[key], depth + 1);
+    if (found) return found;
+  }
+
+  for (const nested of Object.values(record)) {
+    const found = findReferralRecord(nested, depth + 1);
+    if (found) return found;
+  }
+
+  return null;
+}
+
+function hasReferralSignal(record: Record<string, unknown>) {
+  return Boolean(
+    readString(record, "ctwa_clid") ||
+      readString(record, "ctwaClid") ||
+      readString(record, "source_id") ||
+      readString(record, "sourceId") ||
+      readString(record, "source_url") ||
+      readString(record, "sourceUrl")
+  );
 }
 
 function safeJsonParse(text: string) {

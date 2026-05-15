@@ -27,6 +27,7 @@ import {
   type InboxChargeTrackingDraft
 } from "@/server/services/inbox-charge-parser";
 import { sendConversationMediaMessage, sendConversationMessage, type MessageActor } from "@/server/services/messaging";
+import { sendMetaBusinessMessagingEvent } from "@/server/services/meta-capi";
 import { syncPaymentToUtmify } from "@/server/services/utmify-orders";
 
 export const inboxChargeGatewayIds = ["umbrella", "mangofy", "sigilopay", "lytronpay", "allowpayments"] as const;
@@ -163,6 +164,44 @@ export async function createInboxCharge(input: InboxChargeCreateInput, workspace
       providerPaymentId: transaction.id,
       product: normalized.product,
       amount: normalized.amount
+    }
+  });
+
+  const capiLead = await sendMetaBusinessMessagingEvent({
+    eventName: "Lead",
+    eventId: `lead_${customer.id}_${payment.id}`,
+    ctwaClid: customer.ctwaClid,
+    phone: customer.phone,
+    email: customer.email,
+    externalId: customer.id,
+    customData: {
+      currency: "BRL",
+      value: payment.amount,
+      lead_source: "whatsapp_ctwa",
+      content_name: normalized.product,
+      gateway,
+      offer_id: offerId,
+      provider_payment_id: payment.providerPaymentId
+    }
+  });
+
+  await recordTrackingEvent({
+    workspaceId,
+    customerId: customer.id,
+    paymentId: payment.id,
+    offerId,
+    source: "meta_ads",
+    medium: "capi",
+    campaign: normalized.tracking.campaign ?? null,
+    content: normalized.tracking.content ?? null,
+    term: normalized.tracking.term ?? null,
+    fbclid: normalized.tracking.fbclid ?? null,
+    clickId: customer.ctwaClid ?? normalized.tracking.clickId ?? null,
+    eventType: capiLead.ok ? "meta_capi_lead_sent" : "meta_capi_lead_skipped",
+    rawPayloadJson: {
+      status: capiLead.status,
+      gateway,
+      providerPaymentId: payment.providerPaymentId
     }
   });
 

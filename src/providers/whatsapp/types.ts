@@ -35,7 +35,18 @@ export type ParsedWhatsAppMessage = {
   body: string;
   providerMessageId?: string | null;
   eventType: string;
+  referral?: WhatsAppReferral | null;
   raw: unknown;
+};
+
+export type WhatsAppReferral = {
+  ctwaClid?: string | null;
+  sourceId?: string | null;
+  sourceUrl?: string | null;
+  headline?: string | null;
+  body?: string | null;
+  mediaType?: string | null;
+  imageUrl?: string | null;
 };
 
 export interface WhatsAppProvider {

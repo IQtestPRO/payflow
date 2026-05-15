@@ -5,6 +5,7 @@ import { UmbrellaProvider } from "@/providers/payments/umbrella";
 import { TriboPayProvider } from "@/providers/payments/tribopay";
 import { UtmifyProvider } from "@/providers/tracking/utmify";
 import { syncPaymentToUtmify } from "@/server/services/utmify-orders";
+import { sendMetaBusinessMessagingEvent } from "@/server/services/meta-capi";
 
 export async function processWhatsAppWebhookPayload(payload: unknown, workspaceId?: string) {
   const targetWorkspaceId = workspaceId ?? (await getWorkspaceId());
@@ -26,7 +27,59 @@ export async function processWhatsAppWebhookPayload(payload: unknown, workspaceI
       continue;
     }
 
-    results.push(await registerInboundWhatsAppMessage({ ...message, workspaceId: targetWorkspaceId, metadataJson: message.raw }));
+    const registered = await registerInboundWhatsAppMessage({
+      ...message,
+      workspaceId: targetWorkspaceId,
+      referral: message.referral,
+      metadataJson: message.raw
+    });
+
+    if (message.referral?.ctwaClid) {
+      await recordTrackingEvent({
+        workspaceId: targetWorkspaceId,
+        customerId: registered.customerId,
+        source: "meta_ads",
+        medium: "ctwa",
+        campaign: message.referral.sourceId ?? null,
+        content: message.referral.headline ?? null,
+        clickId: message.referral.ctwaClid,
+        eventType: "whatsapp_ctwa_referral",
+        rawPayloadJson: {
+          providerMessageId: message.providerMessageId,
+          referral: message.referral
+        }
+      });
+
+      const capi = await sendMetaBusinessMessagingEvent({
+        eventName: "Contact",
+        eventId: `contact_${registered.customerId}_${message.referral.ctwaClid}`,
+        ctwaClid: message.referral.ctwaClid,
+        phone: message.phone,
+        externalId: registered.customerId,
+        customData: {
+          currency: "BRL",
+          value: 0,
+          lead_source: "whatsapp_ctwa",
+          source_id: message.referral.sourceId ?? null
+        }
+      });
+
+      await recordTrackingEvent({
+        workspaceId: targetWorkspaceId,
+        customerId: registered.customerId,
+        source: "meta_ads",
+        medium: "capi",
+        campaign: message.referral.sourceId ?? null,
+        clickId: message.referral.ctwaClid,
+        eventType: capi.ok ? "meta_capi_contact_sent" : "meta_capi_contact_skipped",
+        rawPayloadJson: {
+          status: capi.status,
+          providerMessageId: message.providerMessageId
+        }
+      });
+    }
+
+    results.push(registered);
   }
 
   return { received: messages.length, results };
@@ -80,6 +133,7 @@ export async function processUmbrellaWebhookPayload(payload: unknown, workspaceI
   });
 
   if (payment.status === "PAID") {
+    await sendPaymentPurchaseToMeta(payment, customer, targetWorkspaceId);
     await cancelRecoveryBecausePaid(payment);
     return { payment, recovery: "converted", utmify };
   }
@@ -136,6 +190,7 @@ export async function processTriboPayWebhookPayload(payload: unknown, workspaceI
   });
 
   if (payment.status === "PAID") {
+    await sendPaymentPurchaseToMeta(payment, customer, targetWorkspaceId);
     await cancelRecoveryBecausePaid(payment);
     return { payment, recovery: "converted", utmify };
   }
@@ -193,4 +248,39 @@ export async function processUtmifyWebhookPayload(payload: unknown, workspaceId?
   });
 
   return { ok: true };
+}
+
+async function sendPaymentPurchaseToMeta(
+  payment: { id: string; providerPaymentId: string; amount: number; currency: string; offerName?: string | null },
+  customer: { id: string; phone?: string | null; email?: string | null; ctwaClid?: string | null },
+  workspaceId: string
+) {
+  const capi = await sendMetaBusinessMessagingEvent({
+    eventName: "Purchase",
+    eventId: `purchase_${customer.id}_${payment.providerPaymentId || payment.id}`,
+    ctwaClid: customer.ctwaClid,
+    phone: customer.phone,
+    email: customer.email,
+    externalId: customer.id,
+    customData: {
+      currency: payment.currency || "BRL",
+      value: payment.amount,
+      lead_source: "whatsapp_ctwa",
+      content_name: payment.offerName ?? "PayFlow payment"
+    }
+  });
+
+  await recordTrackingEvent({
+    workspaceId,
+    customerId: customer.id,
+    paymentId: payment.id,
+    source: "meta_ads",
+    medium: "capi",
+    clickId: customer.ctwaClid ?? null,
+    eventType: capi.ok ? "meta_capi_purchase_sent" : "meta_capi_purchase_skipped",
+    rawPayloadJson: {
+      status: capi.status,
+      providerPaymentId: payment.providerPaymentId
+    }
+  });
 }
